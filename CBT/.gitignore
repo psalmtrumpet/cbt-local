@@ -10,9 +10,9 @@ obj/
 # Environment / secrets — NEVER commit these
 .env
 
-# Local appsettings overrides
-appsettings.Local.json
-appsettings.Development.json
+# appsettings — use environment variables or a local override instead
+appsettings.json
+appsettings.*.json
 
 # Data files (recordings, snapshots)
 data/
