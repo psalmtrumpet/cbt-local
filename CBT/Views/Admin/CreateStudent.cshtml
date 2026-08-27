@@ -1,0 +1,85 @@
+@model CreateStudentViewModel
+@{
+    Layout = "_Layout";
+    ViewData["Title"] = "Add Student";
+}
+
+<div class="container py-4" style="max-width: 600px;">
+    <div class="d-flex align-items-center mb-4">
+        <a asp-controller="Admin" asp-action="Students" class="btn btn-sm btn-outline-secondary me-3">
+            <i class="bi bi-arrow-left"></i>
+        </a>
+        <div>
+            <h2 class="page-title mb-0"><i class="bi bi-person-plus me-2"></i>Add New Student</h2>
+            <p class="text-muted mb-0">Register a student for the CBT examination</p>
+        </div>
+    </div>
+
+    <div class="card ncs-card">
+        <div class="card-body p-4">
+            <form asp-controller="Admin" asp-action="CreateStudent" method="post" enctype="multipart/form-data">
+                <div asp-validation-summary="ModelOnly" class="alert alert-danger"></div>
+
+                <div class="mb-4">
+                    <label asp-for="StudentNumber" class="form-label fw-medium"></label>
+                    <div class="input-group">
+                        <span class="input-group-text"><i class="bi bi-card-text"></i></span>
+                        <input asp-for="StudentNumber" class="form-control text-uppercase"
+                               placeholder="e.g. NCS2026001" autofocus />
+                    </div>
+                    <span asp-validation-for="StudentNumber" class="text-danger small"></span>
+                    <div class="form-text">Unique identifier for this student (for admin reference).</div>
+                </div>
+
+                <div class="mb-4">
+                    <label asp-for="Surname" class="form-label fw-medium"></label>
+                    <div class="input-group">
+                        <span class="input-group-text"><i class="bi bi-person-badge"></i></span>
+                        <input asp-for="Surname" class="form-control text-uppercase"
+                               placeholder="e.g. OKAFOR" />
+                    </div>
+                    <span asp-validation-for="Surname" class="text-danger small"></span>
+                </div>
+
+                <div class="mb-4">
+                    <label asp-for="FullName" class="form-label fw-medium"></label>
+                    <div class="input-group">
+                        <span class="input-group-text"><i class="bi bi-person"></i></span>
+                        <input asp-for="FullName" class="form-control" placeholder="e.g. Emmanuel Okafor" />
+                    </div>
+                    <span asp-validation-for="FullName" class="text-danger small"></span>
+                </div>
+
+                <div class="mb-4">
+                    <label asp-for="Email" class="form-label fw-medium"></label>
+                    <div class="input-group">
+                        <span class="input-group-text"><i class="bi bi-envelope"></i></span>
+                        <input asp-for="Email" class="form-control" type="email" placeholder="student@example.com" />
+                    </div>
+                    <span asp-validation-for="Email" class="text-danger small"></span>
+                    <div class="form-text">The exam login link and access PIN will be sent to this address.</div>
+                </div>
+
+                <div class="mb-4">
+                    <label asp-for="PassportPhoto" class="form-label fw-medium"></label>
+                    <input asp-for="PassportPhoto" class="form-control" type="file" accept="image/jpeg,image/png" />
+                    <span asp-validation-for="PassportPhoto" class="text-danger small"></span>
+                    <div class="form-text">JPG or PNG, used for identity verification before the exam starts. Optional.</div>
+                </div>
+
+                <div class="alert alert-info border-0 bg-light">
+                    <i class="bi bi-magic me-2 text-info"></i>
+                    A <strong>6-digit PIN</strong> is auto-generated and emailed to the student.
+                    <strong>Student Login:</strong> Email + PIN
+                </div>
+
+                <div class="d-flex gap-3 mt-4">
+                    <button type="submit" class="btn btn-ncs-primary px-4">
+                        <i class="bi bi-person-check me-2"></i>Register Student
+                    </button>
+                    <a asp-controller="Admin" asp-action="Students" class="btn btn-outline-secondary">Cancel</a>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>

@@ -1,0 +1,118 @@
+@model List<NCS.CBT.Models.Question>
+@{
+    Layout = "_Layout";
+    ViewData["Title"] = "Questions";
+    var exam = ViewBag.Exam as NCS.CBT.Models.Exam;
+}
+
+<div class="container-fluid py-4">
+    <div class="d-flex justify-content-between align-items-start mb-4">
+        <div class="d-flex align-items-center">
+            <a asp-controller="Admin" asp-action="Exams" class="btn btn-sm btn-outline-secondary me-3">
+                <i class="bi bi-arrow-left"></i>
+            </a>
+            <div>
+                <h2 class="page-title mb-0"><i class="bi bi-list-ul me-2"></i>Questions</h2>
+                <p class="text-muted mb-0">@exam?.Title &mdash; @Model.Count question(s) &mdash; @exam?.DurationMinutes minutes</p>
+            </div>
+        </div>
+        <div class="d-flex gap-2">
+            <a asp-controller="Admin" asp-action="BulkUploadQuestions" asp-route-examId="@exam?.Id" class="btn btn-outline-success">
+                <i class="bi bi-upload me-2"></i>Bulk Upload
+            </a>
+            <a asp-controller="Admin" asp-action="CreateQuestion" asp-route-examId="@exam?.Id" class="btn btn-ncs-primary">
+                <i class="bi bi-plus-circle me-2"></i>Add Question
+            </a>
+        </div>
+    </div>
+
+    @if (!Model.Any())
+    {
+        <div class="card ncs-card text-center py-5">
+            <i class="bi bi-question-circle fs-1 text-muted d-block mb-3"></i>
+            <h5 class="text-muted">No questions yet</h5>
+            <p class="text-muted">Add questions to this exam to make it available to students.</p>
+            <a asp-controller="Admin" asp-action="CreateQuestion" asp-route-examId="@exam?.Id"
+               class="btn btn-ncs-primary mx-auto" style="width:fit-content">
+                <i class="bi bi-plus-circle me-2"></i>Add First Question
+            </a>
+        </div>
+    }
+    else
+    {
+        <div class="card ncs-card">
+            <div class="card-body p-0">
+                <div class="table-responsive">
+                    <table class="table table-hover mb-0">
+                        <thead class="table-light">
+                            <tr>
+                                <th width="60">#</th>
+                                <th width="80">Type</th>
+                                <th>Question</th>
+                                <th width="80">A</th>
+                                <th width="80">B</th>
+                                <th width="80">C</th>
+                                <th width="80">D</th>
+                                <th width="80" class="text-center">Answer</th>
+                                <th width="120" class="text-end">Actions</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            @foreach (var q in Model)
+                            {
+                                var isTheory = q.QuestionType == "Theory";
+                                <tr>
+                                    <td class="text-muted fw-bold">@q.OrderNumber</td>
+                                    <td>
+                                        @if (isTheory)
+                                        {
+                                            <span class="badge bg-warning text-dark">Theory</span>
+                                        }
+                                        else
+                                        {
+                                            <span class="badge bg-primary">MCQ</span>
+                                        }
+                                    </td>
+                                    <td class="fw-medium" style="max-width:300px;">
+                                        <span class="d-inline-block text-truncate" style="max-width:280px;" title="@q.Text">
+                                            @q.Text
+                                        </span>
+                                    </td>
+                                    <td class="text-muted small @(q.CorrectOption == "A" ? "fw-bold text-success" : "")">@(isTheory ? "—" : q.OptionA)</td>
+                                    <td class="text-muted small @(q.CorrectOption == "B" ? "fw-bold text-success" : "")">@(isTheory ? "—" : q.OptionB)</td>
+                                    <td class="text-muted small @(q.CorrectOption == "C" ? "fw-bold text-success" : "")">@(isTheory ? "—" : q.OptionC)</td>
+                                    <td class="text-muted small @(q.CorrectOption == "D" ? "fw-bold text-success" : "")">@(isTheory ? "—" : q.OptionD)</td>
+                                    <td class="text-center">
+                                        @if (isTheory)
+                                        {
+                                            <span class="badge bg-warning text-dark"><i class="bi bi-robot"></i></span>
+                                        }
+                                        else
+                                        {
+                                            <span class="badge bg-success fs-6">@q.CorrectOption</span>
+                                        }
+                                    </td>
+                                    <td class="text-end">
+                                        <div class="d-flex gap-1 justify-content-end">
+                                            <a asp-controller="Admin" asp-action="EditQuestion" asp-route-id="@q.Id"
+                                               class="btn btn-sm btn-outline-secondary" title="Edit">
+                                                <i class="bi bi-pencil"></i>
+                                            </a>
+                                            <form asp-controller="Admin" asp-action="DeleteQuestion" asp-route-id="@q.Id"
+                                                  method="post" class="d-inline"
+                                                  onsubmit="return confirm('Delete this question?')">
+                                                <button type="submit" class="btn btn-sm btn-outline-danger" title="Delete">
+                                                    <i class="bi bi-trash"></i>
+                                                </button>
+                                            </form>
+                                        </div>
+                                    </td>
+                                </tr>
+                            }
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    }
+</div>

@@ -1,0 +1,217 @@
+@model ResultsViewModel
+@{
+    Layout = "_Layout";
+    ViewData["Title"] = "Exam Results";
+}
+
+<div class="container-fluid py-4">
+    <div class="d-flex justify-content-between align-items-start mb-4">
+        <div class="page-header mb-0">
+            <h2 class="page-title"><i class="bi bi-bar-chart me-2"></i>Exam Results</h2>
+            <p class="text-muted mb-0">@Model.Results.Count result(s) — sorted by highest score</p>
+        </div>
+        <div class="d-flex gap-2 d-print-none flex-wrap">
+            <button onclick="window.print()" class="btn btn-outline-secondary">
+                <i class="bi bi-printer me-2"></i>Print
+            </button>
+            <a asp-action="ExportAnswers" asp-route-examId="@Model.SelectedExamId" class="btn btn-outline-success">
+                <i class="bi bi-file-earmark-spreadsheet me-2"></i>Download Answers
+            </a>
+            <a asp-action="ExportViolations" asp-route-examId="@Model.SelectedExamId" class="btn btn-outline-danger">
+                <i class="bi bi-shield-exclamation me-2"></i>Download Violations
+            </a>
+        </div>
+    </div>
+
+    <!-- Filter -->
+    <div class="card ncs-card mb-4 d-print-none">
+        <div class="card-body py-3">
+            <form method="get" class="d-flex gap-3 align-items-end flex-wrap">
+                <div>
+                    <label class="form-label fw-medium small mb-1">Filter by Exam</label>
+                    <select name="examId" class="form-select form-select-sm" style="min-width:250px;" onchange="this.form.submit()">
+                        <option value="">All Exams</option>
+                        @foreach (var exam in Model.Exams)
+                        {
+                            if (Model.SelectedExamId == exam.Id)
+                            {
+                                <option value="@exam.Id" selected>@exam.Title</option>
+                            }
+                            else
+                            {
+                                <option value="@exam.Id">@exam.Title</option>
+                            }
+                        }
+                    </select>
+                </div>
+                @if (Model.SelectedExamId.HasValue)
+                {
+                    <a asp-controller="Admin" asp-action="Results" class="btn btn-sm btn-outline-secondary">
+                        <i class="bi bi-x me-1"></i>Clear Filter
+                    </a>
+                }
+            </form>
+        </div>
+    </div>
+
+    @if (!Model.Results.Any())
+    {
+        <div class="card ncs-card text-center py-5 d-print-none">
+            <i class="bi bi-inbox fs-1 text-muted d-block mb-3"></i>
+            <h5 class="text-muted">No results found</h5>
+            <p class="text-muted">Results will appear here once students complete their exams.</p>
+        </div>
+    }
+    else
+    {
+        <!-- Print header (only shows when printing) -->
+        <div class="d-none d-print-block mb-3">
+            <h4 class="fw-bold">
+                @(Model.SelectedExamId.HasValue
+                    ? Model.Exams.FirstOrDefault(e => e.Id == Model.SelectedExamId)?.Title
+                    : "All Exams") — Examination Results
+            </h4>
+            <p class="text-muted small">Printed: @DateTime.Now.ToString("dd MMMM yyyy, HH:mm")</p>
+        </div>
+
+        <!-- Summary Stats -->
+        <div class="row g-3 mb-4 d-print-none">
+            <div class="col-sm-4">
+                <div class="card ncs-card text-center py-3">
+                    <div class="fs-2 fw-bold text-ncs">@Model.Results.Count</div>
+                    <div class="text-muted small">Total Submissions</div>
+                </div>
+            </div>
+            <div class="col-sm-4">
+                <div class="card ncs-card text-center py-3">
+                    <div class="fs-2 fw-bold text-success">@Model.Results.Count(r => r.Percentage >= 50 && !r.IsDisqualified)</div>
+                    <div class="text-muted small">Passed (≥50%)</div>
+                </div>
+            </div>
+            <div class="col-sm-4">
+                <div class="card ncs-card text-center py-3">
+                    <div class="fs-2 fw-bold text-muted">
+                        @(Model.Results.Any() ? Model.Results.Average(r => r.Percentage).ToString("F1") : "0")%
+                    </div>
+                    <div class="text-muted small">Average Score</div>
+                </div>
+            </div>
+        </div>
+
+        <div class="card ncs-card">
+            <div class="card-body p-0">
+                <div class="table-responsive">
+                    <table class="table table-hover mb-0">
+                        <thead class="table-light">
+                            <tr>
+                                <th width="50" class="text-center">Rank</th>
+                                <th>Student</th>
+                                <th>Student No.</th>
+                                @if (!Model.SelectedExamId.HasValue)
+                                {
+                                    <th>Exam</th>
+                                }
+                                <th class="text-center">MCQ Score</th>
+                                @if (Model.Results.Any(r => r.HasTheory))
+                                {
+                                    <th class="text-center">Theory Marks</th>
+                                }
+                                <th class="text-center">Total</th>
+                                <th style="min-width:160px;">Performance</th>
+                                <th>Duration</th>
+                                <th>Submitted</th>
+                                <th class="text-center d-print-none">Actions</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            @{ var hasAnyTheory = Model.Results.Any(r => r.HasTheory); }
+                            @foreach (var r in Model.Results)
+                            {
+                                var scoreColor = r.IsDisqualified ? "text-danger" : r.Percentage >= 50 ? "text-success" : "text-danger";
+                                <tr class="@(r.IsDisqualified ? "table-danger" : "")">
+                                    <td class="text-center fw-bold text-muted">
+                                        @if (r.Rank == 1 && !r.IsDisqualified)
+                                        {
+                                            <span class="text-warning"><i class="bi bi-trophy-fill"></i></span>
+                                        }
+                                        else
+                                        {
+                                            @r.Rank
+                                        }
+                                    </td>
+                                    <td class="fw-medium">
+                                        @r.StudentName
+                                        @if (r.IsDisqualified)
+                                        {
+                                            <span class="badge bg-danger ms-1">Disqualified</span>
+                                        }
+                                    </td>
+                                    <td><span class="badge bg-secondary">@r.StudentNumber</span></td>
+                                    @if (!Model.SelectedExamId.HasValue)
+                                    {
+                                        <td class="text-muted small">@r.ExamTitle</td>
+                                    }
+                                    <td class="text-center fw-bold">
+                                        <span class="@scoreColor">@r.MCQScore/@r.MCQCount</span>
+                                    </td>
+                                    @if (hasAnyTheory)
+                                    {
+                                        <td class="text-center">
+                                            @if (r.HasTheory)
+                                            {
+                                                <span class="@scoreColor fw-bold">@r.TheoryScore</span>
+                                                <small class="text-muted">/@(r.TheoryCount * 20)</small>
+                                            }
+                                            else
+                                            {
+                                                <span class="text-muted">—</span>
+                                            }
+                                        </td>
+                                    }
+                                    <td class="text-center fw-bold">
+                                        <span class="@scoreColor">@r.Score</span>
+                                    </td>
+                                    <td>
+                                        <div class="d-flex align-items-center gap-2">
+                                            <div class="progress flex-grow-1" style="height:10px;">
+                                                <div class="progress-bar @(r.Percentage >= 70 ? "bg-success" : r.Percentage >= 50 ? "bg-warning" : "bg-danger")"
+                                                     style="width:@r.Percentage%"></div>
+                                            </div>
+                                            <small class="fw-bold text-nowrap @(r.Percentage >= 50 ? "text-success" : "text-danger")">
+                                                @r.Percentage%
+                                            </small>
+                                        </div>
+                                    </td>
+                                    <td class="text-muted small">
+                                        @if (r.Duration.HasValue)
+                                        {
+                                            @($"{(int)r.Duration.Value.TotalMinutes}m {r.Duration.Value.Seconds}s")
+                                        }
+                                    </td>
+                                    <td class="text-muted small">
+                                        @r.EndTime?.ToLocalTime().ToString("dd MMM, HH:mm")
+                                    </td>
+                                    <td class="text-center d-print-none">
+                                        <a asp-controller="Admin" asp-action="SessionDetail" asp-route-sessionId="@r.SessionId"
+                                           class="btn btn-sm btn-outline-primary" title="View Answers">
+                                            <i class="bi bi-eye me-1"></i>Answers
+                                        </a>
+                                    </td>
+                                </tr>
+                            }
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    }
+</div>
+
+<style>
+    @@media print {
+        .sidebar, nav, footer, .btn, .d-print-none { display: none !important; }
+        .card { border: 1px solid #ddd !important; box-shadow: none !important; }
+        body { font-size: 12px; }
+        .table th, .table td { padding: 6px 8px !important; }
+    }
+</style>

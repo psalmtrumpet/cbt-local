@@ -1,0 +1,23 @@
+@{
+    Layout = "_LoginLayout";
+    ViewData["Title"] = "Access Denied";
+}
+
+<div class="login-wrapper">
+    <div class="login-card shadow-lg">
+        <div class="login-header" style="background: linear-gradient(135deg, #7f1d1d, #c62828);">
+            <div class="login-logo"><i class="bi bi-shield-x"></i></div>
+            <h1 class="login-title">Access Denied</h1>
+            <p class="login-subtitle">You don't have permission to view this page</p>
+        </div>
+        <div class="login-body-section text-center">
+            <p class="text-muted mb-4">Please log in with the correct credentials for your role.</p>
+            <a asp-controller="Account" asp-action="Login" class="btn btn-ncs-primary w-100 mb-3">
+                <i class="bi bi-box-arrow-in-right me-2"></i>Staff Login
+            </a>
+            <a asp-controller="Account" asp-action="StudentLogin" class="btn btn-ncs-outline w-100">
+                <i class="bi bi-mortarboard me-2"></i>Student Login
+            </a>
+        </div>
+    </div>
+</div>

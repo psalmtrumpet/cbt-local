@@ -1,0 +1,277 @@
+@model ExamViewModel
+@{
+    Layout = null;
+    ViewData["Title"] = "Examination";
+}
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>@Model.ExamTitle — TLIMC CBT</title>
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" />
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css" />
+    <link rel="stylesheet" href="~/css/site.css" asp-append-version="true" />
+</head>
+<body class="exam-body">
+
+<!-- Exam Header Bar -->
+<div class="exam-topbar">
+    <div class="exam-topbar-left">
+        <span class="exam-logo"><i class="bi bi-pc-display-horizontal me-2"></i>TLIMC CBT</span>
+        <span class="exam-title-bar d-none d-md-inline">@Model.ExamTitle</span>
+    </div>
+    <div class="exam-topbar-center">
+        <!-- data-end-time is Unix milliseconds; JS calculates remaining time accurately -->
+        <div id="timerDisplay" class="exam-timer" data-end-time="@Model.EndTimeMs">
+            <i class="bi bi-clock me-2"></i>
+            <span id="timerText">--:--</span>
+        </div>
+    </div>
+    <div class="exam-topbar-right">
+        <span class="text-white small d-none d-md-inline">
+            <i class="bi bi-person-circle me-1"></i>@User.Identity?.Name
+        </span>
+    </div>
+</div>
+
+<!-- Exam Container -->
+<div class="exam-container">
+    <!-- Sidebar: Question Navigator -->
+    <div class="exam-sidebar">
+        <div class="sidebar-header">
+            <small class="text-muted fw-semibold text-uppercase">Navigator</small>
+            <div class="mt-1 text-muted small">
+                <i class="bi bi-check-circle-fill text-success me-1"></i>
+                <span id="answeredCount">@Model.QuestionNavItems.Count(q => q.IsAnswered)</span>/<strong>@Model.TotalQuestions</strong> answered
+            </div>
+        </div>
+        <div class="question-grid">
+            @foreach (var item in Model.QuestionNavItems)
+            {
+                <a href="@Url.Action("TakeExam", "Student", new { sessionId = Model.SessionId, questionIndex = item.Index })"
+                   class="q-nav-btn @(item.Index == Model.CurrentIndex ? "q-current" : item.IsAnswered ? "q-answered" : "")"
+                   data-index="@item.Index"
+                   data-question-id="@item.QuestionId"
+                   title="Question @(item.Index + 1)">
+                    @(item.Index + 1)
+                </a>
+            }
+        </div>
+    </div>
+
+    <!-- Main Exam Area -->
+    <div class="exam-main">
+        <div class="question-card">
+            <!-- Progress Bar -->
+            <div class="question-progress mb-3">
+                <div class="d-flex justify-content-between align-items-center mb-1">
+                    <span class="fw-semibold text-ncs">
+                        Question @(Model.CurrentIndex + 1) of @Model.TotalQuestions
+                    </span>
+                    <span class="text-muted small">@Model.CurrentQuestion.OrderNumber / @Model.TotalQuestions</span>
+                </div>
+                <div class="progress" style="height: 6px;">
+                    <div class="progress-bar bg-ncs"
+                         style="width: @((double)(Model.CurrentIndex + 1) / Model.TotalQuestions * 100)%">
+                    </div>
+                </div>
+            </div>
+
+            <!-- Question Text -->
+            <div class="question-text">
+                <div class="question-number-badge">Q@(Model.CurrentIndex + 1)</div>
+                <p class="question-content">@Model.CurrentQuestion.Text</p>
+            </div>
+
+            <!-- Answer Options -->
+            <div class="options-container"
+                 id="optionsContainer"
+                 data-session-id="@Model.SessionId"
+                 data-question-id="@Model.CurrentQuestion.Id"
+                 data-question-type="@Model.CurrentQuestion.QuestionType">
+
+                @if (Model.CurrentQuestion.QuestionType == "Theory")
+                {
+                    <div class="theory-answer-wrapper">
+                        <label class="form-label fw-semibold text-ncs mb-2">
+                            <i class="bi bi-pencil-square me-2"></i>Your Answer
+                        </label>
+                        <textarea id="theoryAnswer"
+                                  class="form-control theory-textarea"
+                                  rows="7"
+                                  placeholder="Type your answer here..."
+                                  maxlength="2000">@Model.CurrentTheoryAnswer</textarea>
+                        <div class="d-flex justify-content-between mt-1">
+                            <small class="text-muted">Write in your own words. AI will grade based on meaning, not exact wording.</small>
+                            <small class="text-muted"><span id="theoryCharCount">0</span>/2000</small>
+                        </div>
+                    </div>
+                }
+                else
+                {
+                    @foreach (var opt in new[]
+                    {
+                        ("A", Model.CurrentQuestion.OptionA),
+                        ("B", Model.CurrentQuestion.OptionB),
+                        ("C", Model.CurrentQuestion.OptionC),
+                        ("D", Model.CurrentQuestion.OptionD)
+                    })
+                    {
+                        <label class="option-item @(Model.CurrentAnswer == opt.Item1 ? "option-selected" : "")"
+                               data-option="@opt.Item1">
+                            <input type="radio" name="answer" value="@opt.Item1"
+                                   @(Model.CurrentAnswer == opt.Item1 ? "checked" : "")
+                                   class="option-radio" />
+                            <span class="option-letter">@opt.Item1</span>
+                            <span class="option-text">@opt.Item2</span>
+                            <span class="option-check"><i class="bi bi-check-circle-fill"></i></span>
+                        </label>
+                    }
+                }
+            </div>
+
+            <!-- Navigation Buttons -->
+            <div class="exam-nav-buttons">
+                <div>
+                    @if (Model.CurrentIndex > 0)
+                    {
+                        <a href="@Url.Action("TakeExam", "Student", new { sessionId = Model.SessionId, questionIndex = Model.CurrentIndex - 1 })"
+                           class="btn btn-exam-nav">
+                            <i class="bi bi-arrow-left me-2"></i>Previous
+                        </a>
+                    }
+                </div>
+                <div class="d-flex gap-3">
+                    @if (Model.CurrentIndex < Model.TotalQuestions - 1)
+                    {
+                        <a href="@Url.Action("TakeExam", "Student", new { sessionId = Model.SessionId, questionIndex = Model.CurrentIndex + 1 })"
+                           class="btn btn-ncs-primary" id="nextBtn">
+                            Next<i class="bi bi-arrow-right ms-2"></i>
+                        </a>
+                    }
+                    <button type="button"
+                            class="btn @(Model.CurrentIndex == Model.TotalQuestions - 1 ? "btn-submit-exam" : "btn-outline-danger btn-submit-exam")"
+                            id="submitExamBtn">
+                        <i class="bi bi-send-check me-2"></i>Submit Exam
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Submit Confirmation Modal -->
+<div class="modal fade" id="submitModal" tabindex="-1" data-bs-backdrop="static">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content border-0 shadow-lg">
+            <div class="modal-header border-0 pb-0">
+                <h5 class="modal-title fw-bold">
+                    <i class="bi bi-send-check text-ncs me-2"></i>Submit Examination?
+                </h5>
+            </div>
+            <div class="modal-body">
+                <div class="mb-3">
+                    <div class="d-flex justify-content-between py-2 border-bottom">
+                        <span>Questions Answered</span>
+                        <strong id="modalAnswered">0 / @Model.TotalQuestions</strong>
+                    </div>
+                    <div class="d-flex justify-content-between py-2">
+                        <span>Unanswered</span>
+                        <strong id="modalUnanswered" class="text-warning">0</strong>
+                    </div>
+                </div>
+                <div class="alert alert-warning border-0 bg-warning bg-opacity-10" id="unansweredWarning" style="display:none;">
+                    <i class="bi bi-exclamation-triangle me-2"></i>
+                    You have <strong id="warnCount">0</strong> unanswered question(s).
+                    You <strong>cannot</strong> change answers after submission.
+                </div>
+                <p class="text-muted mb-0">Are you sure you want to submit? <strong>This action cannot be undone.</strong></p>
+            </div>
+            <div class="modal-footer border-0">
+                <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">
+                    <i class="bi bi-x-circle me-2"></i>Cancel, Continue
+                </button>
+                <form asp-controller="Student" asp-action="SubmitExam" method="post" id="submitForm">
+                    <input type="hidden" name="sessionId" value="@Model.SessionId" />
+                    <button type="submit" class="btn btn-ncs-primary">
+                        <i class="bi bi-check-circle me-2"></i>Yes, Submit Now
+                    </button>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Auto-submit form (used when timer expires) -->
+<form asp-controller="Student" asp-action="SubmitExam" method="post" id="autoSubmitForm" style="display:none;">
+    <input type="hidden" name="sessionId" value="@Model.SessionId" />
+</form>
+
+<!-- Time Up Modal -->
+<div class="modal fade" id="timeUpModal" tabindex="-1" data-bs-backdrop="static" data-bs-keyboard="false">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content border-0 shadow-lg">
+            <div class="modal-body text-center py-5">
+                <i class="bi bi-alarm text-danger" style="font-size:3rem;"></i>
+                <h4 class="mt-3 fw-bold">Time Is Up!</h4>
+                <p class="text-muted">Your exam is being submitted automatically. Please wait...</p>
+                <div class="spinner-border text-ncs mt-2" role="status"></div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js"></script>
+
+<!-- Pass server data to exam.js and proctor.js -->
+<script>
+    window.EXAM = {
+        sessionId: @Model.SessionId,
+        studentId: '@User.FindFirst(System.Security.Claims.ClaimTypes.NameIdentifier)?.Value',
+        currentQuestionId: @Model.CurrentQuestion.Id,
+        currentIndex: @Model.CurrentIndex,
+        totalQuestions: @Model.TotalQuestions,
+        endTimeMs: @Model.EndTimeMs,
+        remainingSeconds: @Model.RemainingSeconds,
+        answeredQuestionIds: @Html.Raw(
+            System.Text.Json.JsonSerializer.Serialize(
+                Model.QuestionNavItems.Where(q => q.IsAnswered).Select(q => q.QuestionId).ToList()
+            )
+        )
+    };
+</script>
+<script src="~/js/exam.js" asp-append-version="true"></script>
+<!-- Proctoring: face-api.js + proctor module (students only) -->
+<script src="https://cdn.jsdelivr.net/npm/face-api.js@0.22.2/dist/face-api.min.js"></script>
+<script src="~/js/proctor.js" asp-append-version="true"></script>
+<!-- SignalR: listen for proctor disqualify signal -->
+<script src="https://cdn.jsdelivr.net/npm/@@microsoft/signalr@8.0.0/dist/browser/signalr.min.js"></script>
+<script>
+    (function () {
+        const hub = new signalR.HubConnectionBuilder()
+            .withUrl('/examHub')
+            .withAutomaticReconnect()
+            .build();
+
+        hub.on('Disqualified', function () {
+            document.body.innerHTML = `
+                <div style="display:flex;align-items:center;justify-content:center;height:100vh;background:#dc3545;color:#fff;text-align:center;font-family:sans-serif;">
+                    <div>
+                        <i class="bi bi-slash-circle" style="font-size:4rem;"></i>
+                        <h2 class="mt-3">You have been disqualified</h2>
+                        <p>The proctor has ended your exam session.</p>
+                        <a href="/Account/StudentLogin" style="color:#fff;text-decoration:underline;">Return to login</a>
+                    </div>
+                </div>`;
+        });
+
+        hub.start().then(function () {
+            if (window.EXAM && window.EXAM.studentId) {
+                hub.invoke('JoinStudentRoom', window.EXAM.studentId);
+            }
+        });
+    })();
+</script>
+</body>
+</html>

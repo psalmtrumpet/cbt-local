@@ -1,0 +1,107 @@
+@{
+    Layout = "_Layout";
+    ViewData["Title"] = "Bulk Upload Questions";
+    var exam = ViewBag.Exam as NCS.CBT.Models.Exam;
+}
+
+<div class="container py-4" style="max-width:680px;">
+    <div class="d-flex align-items-center mb-4">
+        <a asp-controller="Admin" asp-action="Questions" asp-route-examId="@exam?.Id" class="btn btn-sm btn-outline-secondary me-3">
+            <i class="bi bi-arrow-left"></i>
+        </a>
+        <div>
+            <h2 class="page-title mb-0"><i class="bi bi-file-earmark-arrow-up me-2"></i>Bulk Upload Questions</h2>
+            <p class="text-muted mb-0">@exam?.Title</p>
+        </div>
+    </div>
+
+    @if (TempData["Error"] != null)
+    {
+        <div class="alert alert-danger alert-dismissible fade show">
+            <i class="bi bi-exclamation-triangle me-2"></i>@TempData["Error"]
+            <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+        </div>
+    }
+
+    <!-- Template format explanation -->
+    <div class="card ncs-card mb-4">
+        <div class="card-header ncs-card-header">
+            <h6 class="mb-0"><i class="bi bi-info-circle me-2"></i>Template Format</h6>
+        </div>
+        <div class="card-body p-4">
+            <p class="small text-muted mb-3">The Excel file must contain one or both of these sheets:</p>
+
+            <div class="mb-3">
+                <span class="badge bg-success mb-2">Sheet: MCQ</span>
+                <table class="table table-sm table-bordered small mb-1">
+                    <thead class="table-dark">
+                        <tr>
+                            <th>A — QuestionText</th>
+                            <th>B — OptionA</th>
+                            <th>C — OptionB</th>
+                            <th>D — OptionC</th>
+                            <th>E — OptionD</th>
+                            <th>F — CorrectOption</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <tr>
+                            <td>What does RAM stand for?</td>
+                            <td>Random Access Memory</td>
+                            <td>Read Access Memory</td>
+                            <td>Rapid Action Memory</td>
+                            <td>None of the above</td>
+                            <td class="fw-bold text-success">A</td>
+                        </tr>
+                    </tbody>
+                </table>
+                <small class="text-muted">CorrectOption must be A, B, C, or D. Options C and D are optional.</small>
+            </div>
+
+            <div>
+                <span class="badge bg-secondary mb-2">Sheet: Theory</span>
+                <table class="table table-sm table-bordered small mb-1">
+                    <thead class="table-dark">
+                        <tr>
+                            <th>A — QuestionText</th>
+                            <th>B — ModelAnswer (for AI grading)</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <tr>
+                            <td>Explain the difference between TCP and UDP.</td>
+                            <td>TCP is connection-oriented and guarantees delivery; UDP is connectionless and faster...</td>
+                        </tr>
+                    </tbody>
+                </table>
+                <small class="text-muted">ModelAnswer is optional but recommended for accurate AI grading.</small>
+            </div>
+        </div>
+    </div>
+
+    <!-- Upload form -->
+    <div class="card ncs-card">
+        <div class="card-body p-4">
+            <form asp-controller="Admin" asp-action="BulkUploadQuestions" asp-route-examId="@exam?.Id"
+                  method="post" enctype="multipart/form-data">
+                @Html.AntiForgeryToken()
+                <div class="mb-4">
+                    <label class="form-label fw-medium">Excel File (.xlsx)</label>
+                    <input type="file" name="file" class="form-control" accept=".xlsx" required />
+                    <div class="form-text">Must include a sheet named <strong>MCQ</strong> and/or <strong>Theory</strong>. Row 1 = headers, data starts at row 2.</div>
+                </div>
+
+                <div class="d-flex gap-3 flex-wrap align-items-center">
+                    <button type="submit" class="btn btn-ncs-primary px-4">
+                        <i class="bi bi-cloud-upload me-2"></i>Upload Questions
+                    </button>
+                    <a asp-controller="Admin" asp-action="DownloadQuestionTemplate" class="btn btn-outline-success">
+                        <i class="bi bi-file-earmark-arrow-down me-2"></i>Download Template
+                    </a>
+                    <a asp-controller="Admin" asp-action="Questions" asp-route-examId="@exam?.Id"
+                       class="btn btn-outline-secondary">Cancel</a>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>

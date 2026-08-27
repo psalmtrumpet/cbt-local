@@ -1,0 +1,105 @@
+@model StudentLoginViewModel
+@{
+    Layout = "_LoginLayout";
+    ViewData["Title"] = "Student Login";
+}
+
+<div class="login-wrapper">
+    <div class="login-card shadow-lg">
+        <div class="login-header student-header">
+            <div class="login-logo">
+                <i class="bi bi-mortarboard-fill"></i>
+            </div>
+            <h1 class="login-title">TLIMC CBT</h1>
+            <p class="login-subtitle">Student Examination Portal</p>
+        </div>
+
+        <div class="login-body-section">
+            <h5 class="text-center mb-1 fw-semibold text-dark">Student Login</h5>
+            <p class="text-center text-muted small mb-4">Enter your email address and the PIN sent to you</p>
+
+            @{
+                var errorType = TempData["ErrorType"]?.ToString();
+                var errorMsg = TempData["ErrorMessage"]?.ToString();
+                var sessionExpired = Context.Request.Query["expired"] == "1";
+            }
+
+            @if (sessionExpired)
+            {
+                <div class="alert alert-warning border-0 shadow-sm">
+                    <i class="bi bi-arrow-clockwise me-2"></i>
+                    Your session expired. Please log in again.
+                </div>
+            }
+
+            @if (!string.IsNullOrEmpty(errorMsg))
+            {
+                @if (errorType == "completed")
+                {
+                    <div class="alert alert-warning border-0 shadow-sm">
+                        <div class="d-flex align-items-center">
+                            <i class="bi bi-check-circle-fill text-warning fs-4 me-3"></i>
+                            <div>
+                                <strong>Exam Already Completed</strong>
+                                <p class="mb-0 small">@errorMsg</p>
+                            </div>
+                        </div>
+                    </div>
+                }
+                else if (errorType == "session")
+                {
+                    <div class="alert alert-danger border-0 shadow-sm">
+                        <div class="d-flex align-items-center">
+                            <i class="bi bi-shield-exclamation fs-4 me-3"></i>
+                            <div>
+                                <strong>Session Already Active</strong>
+                                <p class="mb-0 small">@errorMsg</p>
+                            </div>
+                        </div>
+                    </div>
+                }
+                else
+                {
+                    <div class="alert alert-danger border-0 shadow-sm">
+                        <i class="bi bi-exclamation-triangle-fill me-2"></i>@errorMsg
+                    </div>
+                }
+            }
+
+            <form asp-controller="Account" asp-action="StudentLogin" method="post">
+                <div asp-validation-summary="ModelOnly" class="alert alert-danger small"></div>
+
+                <div class="mb-3">
+                    <label asp-for="Email" class="form-label fw-medium"></label>
+                    <div class="input-group">
+                        <span class="input-group-text"><i class="bi bi-envelope"></i></span>
+                        <input asp-for="Email" class="form-control" type="email" placeholder="your.email@example.com" autocomplete="email" autofocus />
+                    </div>
+                    <span asp-validation-for="Email" class="text-danger small"></span>
+                </div>
+
+                <div class="mb-4">
+                    <label asp-for="AccessCode" class="form-label fw-medium"></label>
+                    <div class="input-group">
+                        <span class="input-group-text"><i class="bi bi-key"></i></span>
+                        <input asp-for="AccessCode" class="form-control" placeholder="6-digit PIN" autocomplete="off" />
+                    </div>
+                    <span asp-validation-for="AccessCode" class="text-danger small"></span>
+                    <div class="form-text">PIN was sent to your email when your account was created</div>
+                </div>
+
+                <button type="submit" class="btn btn-ncs-primary w-100 py-2 fw-semibold">
+                    <i class="bi bi-play-circle me-2"></i>Start Examination
+                </button>
+            </form>
+
+        </div>
+    </div>
+
+    <div class="text-center mt-4 text-white-50">
+        <small>&copy; @DateTime.Now.Year TLIMC</small>
+    </div>
+    <div class="text-center mt-2">
+        <a href="/Account/Login" class="text-white-50 small">Staff / Admin Login &rarr;</a>
+    </div>
+</div>

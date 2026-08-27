@@ -1,0 +1,53 @@
+{
+  "Version": 1,
+  "WorkspaceRootPath": "C:\\Users\\samuel.ojekunle\\Desktop\\NCS\\",
+  "Documents": [
+    {
+      "AbsoluteMoniker": "D:0:0:{788C9484-1108-CB2B-F72F-C9F0E006E40D}|CBT\\NCS.CBT.csproj|c:\\users\\samuel.ojekunle\\desktop\\ncs\\cbt\\docker-compose.yml||{8B382828-6202-11D1-8870-0000F87579D2}",
+      "RelativeMoniker": "D:0:0:{788C9484-1108-CB2B-F72F-C9F0E006E40D}|CBT\\NCS.CBT.csproj|solutionrelative:cbt\\docker-compose.yml||{8B382828-6202-11D1-8870-0000F87579D2}"
+    },
+    {
+      "AbsoluteMoniker": "D:0:0:{788C9484-1108-CB2B-F72F-C9F0E006E40D}|CBT\\NCS.CBT.csproj|c:\\users\\samuel.ojekunle\\desktop\\ncs\\cbt\\appsettings.json||{90A6B3A7-C1A3-4009-A288-E2FF89E96FA0}",
+      "RelativeMoniker": "D:0:0:{788C9484-1108-CB2B-F72F-C9F0E006E40D}|CBT\\NCS.CBT.csproj|solutionrelative:cbt\\appsettings.json||{90A6B3A7-C1A3-4009-A288-E2FF89E96FA0}"
+    }
+  ],
+  "DocumentGroupContainers": [
+    {
+      "Orientation": 0,
+      "VerticalTabListWidth": 256,
+      "DocumentGroups": [
+        {
+          "DockedWidth": 200,
+          "SelectedChildIndex": 0,
+          "Children": [
+            {
+              "$type": "Document",
+              "DocumentIndex": 0,
+              "Title": "docker-compose.yml",
+              "DocumentMoniker": "C:\\Users\\samuel.ojekunle\\Desktop\\NCS\\CBT\\docker-compose.yml",
+              "RelativeDocumentMoniker": "CBT\\docker-compose.yml",
+              "ToolTip": "C:\\Users\\samuel.ojekunle\\Desktop\\NCS\\CBT\\docker-compose.yml",
+              "RelativeToolTip": "CBT\\docker-compose.yml",
+              "ViewState": "AgIAAAAAAAAAAAAAAAAAABAAAABuAAAAAAAAAA==",
+              "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.003775|",
+              "WhenOpened": "2026-03-26T17:29:32.795Z",
+              "EditorCaption": ""
+            },
+            {
+              "$type": "Document",
+              "DocumentIndex": 1,
+              "Title": "appsettings.json",
+              "DocumentMoniker": "C:\\Users\\samuel.ojekunle\\Desktop\\NCS\\CBT\\appsettings.json",
+              "RelativeDocumentMoniker": "CBT\\appsettings.json",
+              "ToolTip": "C:\\Users\\samuel.ojekunle\\Desktop\\NCS\\CBT\\appsettings.json",
+              "RelativeToolTip": "CBT\\appsettings.json",
+              "ViewState": "AgIAAAAAAAAAAAAAAAAAAAwAAAAAAAAAAAAAAA==",
+              "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.001642|",
+              "WhenOpened": "2026-03-26T07:43:14.923Z"
+            }
+          ]
+        }
+      ]
+    }
+  ]
+}

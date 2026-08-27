@@ -1,0 +1,192 @@
+@model AssignExamsViewModel
+@{
+    Layout = "_Layout";
+    ViewData["Title"] = "Assign Students to Exams";
+}
+
+<div class="container-fluid py-4">
+    <div class="d-flex align-items-center justify-content-between mb-4">
+        <div>
+            <h4 class="fw-bold mb-0"><i class="bi bi-diagram-3 me-2 text-ncs"></i>Assign Students to Exams</h4>
+            <small class="text-muted">Map each student to the exam they should take when they log in</small>
+        </div>
+    </div>
+
+    @if (TempData["Success"] != null)
+    {
+        <div class="alert alert-success alert-dismissible fade show shadow-sm">
+            <i class="bi bi-check-circle-fill me-2"></i>@TempData["Success"]
+            <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+        </div>
+    }
+    @if (TempData["Error"] != null)
+    {
+        <div class="alert alert-danger alert-dismissible fade show shadow-sm">
+            <i class="bi bi-exclamation-triangle-fill me-2"></i>@TempData["Error"]
+            <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+        </div>
+    }
+
+    <div class="row g-3 mb-4">
+        <!-- Filter / Search bar -->
+        <div class="col-12">
+            <form method="get" class="d-flex gap-2 flex-wrap align-items-end">
+                <div>
+                    <label class="form-label small fw-medium mb-1">Show</label>
+                    <select name="filter" class="form-select form-select-sm" onchange="this.form.submit()" style="width:220px;">
+                        <option value="all" selected="@(Model.Filter=="all")">All students</option>
+                        <option value="unassigned" selected="@(Model.Filter=="unassigned")">Unassigned only</option>
+                        @foreach (var exam in Model.Exams)
+                        {
+                            var val = $"exam:{exam.Id}";
+                            <option value="@val" selected="@(Model.Filter==val)">Assigned to: @exam.Title</option>
+                        }
+                    </select>
+                </div>
+                <div>
+                    <label class="form-label small fw-medium mb-1">Search</label>
+                    <div class="input-group input-group-sm" style="width:260px;">
+                        <input type="text" name="search" class="form-control" placeholder="Name, number or email..." value="@Model.SearchTerm" />
+                        <button class="btn btn-outline-secondary" type="submit"><i class="bi bi-search"></i></button>
+                    </div>
+                </div>
+                @if (!string.IsNullOrEmpty(Model.SearchTerm) || Model.Filter != "all")
+                {
+                    <div class="align-self-end">
+                        <a href="@Url.Action("AssignExams")" class="btn btn-outline-secondary btn-sm">
+                            <i class="bi bi-x-circle me-1"></i>Clear
+                        </a>
+                    </div>
+                }
+            </form>
+        </div>
+    </div>
+
+    <!-- Bulk assign form -->
+    <form asp-action="AssignExams" method="post" id="assignForm">
+        @Html.AntiForgeryToken()
+
+        <div class="card border-0 shadow-sm">
+            <div class="card-header bg-white border-bottom d-flex align-items-center gap-3 py-3 flex-wrap">
+                <div class="d-flex align-items-center gap-2">
+                    <input type="checkbox" id="selectAll" class="form-check-input mt-0" title="Select all visible" />
+                    <label for="selectAll" class="form-label mb-0 small fw-medium">Select all</label>
+                </div>
+                <div class="d-flex align-items-center gap-2 ms-auto">
+                    <select name="examId" class="form-select form-select-sm" style="width:260px;" required>
+                        <option value="">— Choose exam to assign —</option>
+                        @foreach (var exam in Model.Exams)
+                        {
+                            <option value="@exam.Id">@exam.Title (@exam.Questions.Count q)</option>
+                        }
+                    </select>
+                    <button type="submit" class="btn btn-ncs-primary btn-sm" onclick="return validateAssign()">
+                        <i class="bi bi-person-check me-1"></i>Assign Selected
+                    </button>
+                </div>
+            </div>
+
+            <div class="table-responsive">
+                <table class="table table-hover align-middle mb-0">
+                    <thead class="table-light">
+                        <tr>
+                            <th style="width:40px;"></th>
+                            <th>Student No.</th>
+                            <th>Full Name</th>
+                            <th>Email</th>
+                            <th>Current Assignment</th>
+                            <th>Status</th>
+                            <th></th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        @if (!Model.Students.Any())
+                        {
+                            <tr>
+                                <td colspan="7" class="text-center text-muted py-4">No students found.</td>
+                            </tr>
+                        }
+                        @foreach (var s in Model.Students)
+                        {
+                            <tr>
+                                <td>
+                                    <input type="checkbox" name="studentIds" value="@s.Id"
+                                           class="form-check-input student-check mt-0"
+                                           @(s.HasCompletedExam ? "disabled" : "") />
+                                </td>
+                                <td class="fw-medium text-monospace small">@s.StudentNumber</td>
+                                <td>@s.FullName</td>
+                                <td class="small text-muted">@(s.Email ?? "—")</td>
+                                <td>
+                                    @if (s.AssignedExamId.HasValue)
+                                    {
+                                        <span class="badge bg-success-subtle text-success border border-success-subtle">
+                                            <i class="bi bi-check-circle me-1"></i>@s.AssignedExamTitle
+                                        </span>
+                                    }
+                                    else
+                                    {
+                                        <span class="badge bg-warning-subtle text-warning border border-warning-subtle">
+                                            <i class="bi bi-dash-circle me-1"></i>Unassigned
+                                        </span>
+                                    }
+                                </td>
+                                <td>
+                                    @if (s.HasCompletedExam)
+                                    {
+                                        <span class="badge bg-secondary-subtle text-secondary">Completed</span>
+                                    }
+                                    else
+                                    {
+                                        <span class="badge bg-primary-subtle text-primary">Pending</span>
+                                    }
+                                </td>
+                                <td class="text-end">
+                                    @if (s.AssignedExamId.HasValue && !s.HasCompletedExam)
+                                    {
+                                        <form asp-action="UnassignExam" method="post" class="d-inline"
+                                              onsubmit="return confirm('Remove assignment for @Html.Raw(s.FullName.Replace("'", "\\'"))?')">
+                                            @Html.AntiForgeryToken()
+                                            <input type="hidden" name="studentId" value="@s.Id" />
+                                            <button type="submit" class="btn btn-outline-danger btn-sm py-0 px-2">
+                                                <i class="bi bi-x-circle"></i>
+                                            </button>
+                                        </form>
+                                    }
+                                </td>
+                            </tr>
+                        }
+                    </tbody>
+                </table>
+            </div>
+
+            <div class="card-footer bg-white border-top text-muted small py-2">
+                Showing @Model.Students.Count student(s).
+                @{
+                    var assigned = Model.Students.Count(s => s.AssignedExamId.HasValue);
+                    var unassigned = Model.Students.Count(s => !s.AssignedExamId.HasValue);
+                }
+                <strong class="text-success">@assigned assigned</strong> &mdash;
+                <strong class="text-warning">@unassigned unassigned</strong>
+            </div>
+        </div>
+    </form>
+</div>
+
+@section Scripts {
+<script>
+    // Select all toggle
+    document.getElementById('selectAll').addEventListener('change', function () {
+        document.querySelectorAll('.student-check:not(:disabled)')
+            .forEach(cb => cb.checked = this.checked);
+    });
+
+    function validateAssign() {
+        const checked = document.querySelectorAll('.student-check:checked').length;
+        const exam = document.querySelector('[name="examId"]').value;
+        if (checked === 0) { alert('Please select at least one student.'); return false; }
+        if (!exam) { alert('Please choose an exam to assign to.'); return false; }
+        return confirm(`Assign ${checked} student(s) to the selected exam?`);
+    }
+</script>
+}

@@ -1,0 +1,38 @@
+@model NCS.CBT.Models.ExamSession
+@{
+    Layout = "_LoginLayout";
+    ViewData["Title"] = "Exam Submitted";
+}
+
+<div class="completed-wrapper">
+    <div class="completed-card shadow-lg text-center">
+        <div class="completed-icon completed-pass">
+            <i class="bi bi-check-circle-fill"></i>
+        </div>
+
+        <h2 class="fw-bold mt-4 mb-1">Exam Submitted!</h2>
+        <p class="text-muted mb-4">@ViewBag.StudentName — @Model.Exam?.Title</p>
+
+        <div class="alert alert-success border-0 mb-4">
+            <i class="bi bi-shield-check me-2"></i>
+            Your examination has been submitted and recorded successfully.
+        </div>
+
+        <div class="text-muted small mb-4">
+            <i class="bi bi-info-circle me-1"></i>
+            Your results will be reviewed and released by the administrator. You cannot take this exam again.
+        </div>
+
+        @if (Model.EndTime.HasValue)
+        {
+            var dur = Model.EndTime.Value - Model.StartTime;
+            <div class="text-muted small mb-4">
+                <i class="bi bi-clock me-1"></i>Time taken: @($"{(int)dur.TotalMinutes}m {dur.Seconds}s")
+            </div>
+        }
+
+        <a asp-controller="Account" asp-action="StudentLogin" class="btn btn-ncs-outline w-100">
+            <i class="bi bi-box-arrow-left me-2"></i>Back to Login
+        </a>
+    </div>
+</div>

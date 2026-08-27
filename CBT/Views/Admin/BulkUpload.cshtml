@@ -1,0 +1,112 @@
+@model BulkUploadViewModel
+@{
+    Layout = "_Layout";
+    ViewData["Title"] = "Bulk Upload Students";
+}
+
+<div class="container py-4" style="max-width: 640px;">
+    <div class="d-flex align-items-center mb-4">
+        <a asp-controller="Admin" asp-action="Students" class="btn btn-sm btn-outline-secondary me-3">
+            <i class="bi bi-arrow-left"></i>
+        </a>
+        <div>
+            <h2 class="page-title mb-0"><i class="bi bi-upload me-2"></i>Bulk Upload Students</h2>
+            <p class="text-muted mb-0">Upload an Excel file to register multiple students at once</p>
+        </div>
+    </div>
+
+    <!-- Option 1: Excel only -->
+    <div class="card ncs-card mb-4">
+        <div class="card-header ncs-card-header">
+            <h6 class="mb-0"><i class="bi bi-file-earmark-excel me-2 text-success"></i>Option 1 — Excel Only (.xlsx)</h6>
+        </div>
+        <div class="card-body p-4">
+            <p class="text-muted small mb-3">Spreadsheet must have these columns in order (row 1 = headers):</p>
+            <table class="table table-sm table-bordered small mb-3">
+                <thead class="table-dark">
+                    <tr>
+                        <th>A — StudentNumber</th>
+                        <th>B — Surname</th>
+                        <th>C — FullName</th>
+                        <th>D — Email</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr>
+                        <td>NCS2026001</td>
+                        <td>OKAFOR</td>
+                        <td>Emmanuel Okafor</td>
+                        <td>e.okafor@mail.com</td>
+                    </tr>
+                </tbody>
+            </table>
+            <p class="text-muted small mb-0">
+                <i class="bi bi-info-circle me-1"></i>
+                A 6-digit PIN is auto-generated per student and emailed if an email address is provided.
+                Rows with duplicate student numbers are skipped. No passport photos — add them later via <em>Upload Passports</em>.
+            </p>
+        </div>
+    </div>
+
+    <!-- Option 2: ZIP with Excel + photos -->
+    <div class="card ncs-card mb-4 border-ncs">
+        <div class="card-header" style="background:var(--ncs-green-pale);">
+            <h6 class="mb-0 text-ncs"><i class="bi bi-archive me-2"></i>Option 2 — ZIP with Excel + Passport Photos (recommended)</h6>
+        </div>
+        <div class="card-body p-4">
+            <p class="text-muted small mb-2">Create a ZIP file containing the Excel <strong>and</strong> passport photos named by student number:</p>
+            <div class="bg-light rounded p-3 mb-3 small font-monospace">
+                upload.zip<br>
+                &nbsp;&nbsp;├── students.xlsx<br>
+                &nbsp;&nbsp;├── NCS2026001.jpg<br>
+                &nbsp;&nbsp;├── NCS2026002.jpg<br>
+                &nbsp;&nbsp;└── NCS2026003.png
+            </div>
+            <p class="text-muted small mb-0">
+                <i class="bi bi-check-circle text-success me-1"></i>
+                Photos are matched to students by student number. Students without a matching photo are still registered.
+                Accepted photo formats: <strong>.jpg, .jpeg, .png</strong>
+            </p>
+        </div>
+    </div>
+
+    <div class="card ncs-card">
+        <div class="card-body p-4">
+            <form asp-controller="Admin" asp-action="BulkUpload" method="post" enctype="multipart/form-data">
+                <div asp-validation-summary="ModelOnly" class="alert alert-danger"></div>
+
+                <div class="mb-4">
+                    <label asp-for="File" class="form-label fw-medium">Upload File</label>
+                    <input asp-for="File" class="form-control" type="file" accept=".xlsx,.zip" />
+                    <span asp-validation-for="File" class="text-danger small"></span>
+                    <div class="form-text">Upload a <strong>.xlsx</strong> file (students only) or a <strong>.zip</strong> file (students + passport photos). Maximum: 50 MB.</div>
+                </div>
+
+                <div class="mb-4">
+                    <label asp-for="AssignedExamId" class="form-label fw-medium">
+                        <i class="bi bi-diagram-3 me-1"></i>Assign to Exam <span class="text-muted fw-normal">(optional)</span>
+                    </label>
+                    <select asp-for="AssignedExamId" class="form-select">
+                        <option value="">— No assignment, assign later —</option>
+                        @foreach (var exam in Model.Exams)
+                        {
+                            <option value="@exam.Id">@exam.Title</option>
+                        }
+                    </select>
+                    <div class="form-text">All successfully uploaded students will be mapped to this exam automatically.</div>
+                </div>
+
+                <div class="d-flex gap-3 align-items-center flex-wrap">
+                    <button type="submit" class="btn btn-ncs-primary px-4">
+                        <i class="bi bi-cloud-upload me-2"></i>Upload &amp; Register
+                    </button>
+                    <a asp-controller="Admin" asp-action="DownloadBulkTemplate"
+                       class="btn btn-outline-success">
+                        <i class="bi bi-file-earmark-arrow-down me-2"></i>Download Excel Template
+                    </a>
+                    <a asp-controller="Admin" asp-action="Students" class="btn btn-outline-secondary">Cancel</a>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>

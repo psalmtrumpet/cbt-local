@@ -1,0 +1,173 @@
+@model SessionDetailViewModel
+@{
+    Layout = "_Layout";
+    ViewData["Title"] = "Student Answers";
+}
+
+<div class="container-fluid py-4" style="max-width: 960px;">
+    <div class="d-flex align-items-center justify-content-between mb-4 d-print-none">
+        <div class="d-flex align-items-center">
+            <a asp-controller="Admin" asp-action="Results" class="btn btn-sm btn-outline-secondary me-3">
+                <i class="bi bi-arrow-left"></i>
+            </a>
+            <div>
+                <h2 class="page-title mb-0"><i class="bi bi-person-lines-fill me-2"></i>Student Answers</h2>
+                <p class="text-muted mb-0">@Model.ExamTitle</p>
+            </div>
+        </div>
+        <button onclick="window.print()" class="btn btn-outline-secondary">
+            <i class="bi bi-printer me-2"></i>Print
+        </button>
+    </div>
+
+    <!-- Print header -->
+    <div class="d-none d-print-block mb-3">
+        <h4 class="fw-bold">@Model.ExamTitle — Answer Script</h4>
+        <p class="text-muted small">Printed: @DateTime.Now.ToString("dd MMMM yyyy, HH:mm")</p>
+    </div>
+
+    <!-- Student Info Card -->
+    <div class="card ncs-card mb-4">
+        <div class="card-body">
+            <div class="row g-3">
+                <div class="col-sm-4">
+                    <div class="text-muted small mb-1">Student</div>
+                    <div class="fw-semibold">@Model.StudentName</div>
+                </div>
+                <div class="col-sm-3">
+                    <div class="text-muted small mb-1">Student No.</div>
+                    <div><span class="badge bg-secondary fs-6">@Model.StudentNumber</span></div>
+                </div>
+                <div class="col-sm-2 text-center">
+                    <div class="text-muted small mb-1">Score</div>
+                    <div class="fw-bold fs-5 @(Model.Percentage >= 50 ? "text-success" : "text-danger")">
+                        @Model.Score / @Model.TotalQuestions
+                    </div>
+                </div>
+                <div class="col-sm-2 text-center">
+                    <div class="text-muted small mb-1">Percentage</div>
+                    <div class="fw-bold fs-5 @(Model.Percentage >= 50 ? "text-success" : "text-danger")">
+                        @Model.Percentage%
+                    </div>
+                </div>
+                <div class="col-sm-1 text-center">
+                    <div class="text-muted small mb-1">Status</div>
+                    @if (Model.IsDisqualified)
+                    {
+                        <span class="badge bg-danger">DQ</span>
+                    }
+                    else if (Model.Percentage >= 50)
+                    {
+                        <span class="badge bg-success">Pass</span>
+                    }
+                    else
+                    {
+                        <span class="badge bg-danger">Fail</span>
+                    }
+                </div>
+            </div>
+        </div>
+    </div>
+
+    @if (!Model.Answers.Any())
+    {
+        <div class="card ncs-card text-center py-5 d-print-none">
+            <i class="bi bi-inbox fs-1 text-muted d-block mb-2"></i>
+            <p class="text-muted">No answers recorded for this session.</p>
+        </div>
+    }
+    else
+    {
+        @foreach (var a in Model.Answers)
+        {
+            <div class="card ncs-card mb-3 @(a.IsCorrect ? "border-success" : "border-danger")" style="border-left-width: 4px !important;">
+                <div class="card-body py-3 px-4">
+                    <div class="d-flex justify-content-between align-items-start mb-2">
+                        <div class="d-flex align-items-start gap-2 flex-grow-1">
+                            <span class="badge @(a.QuestionType == "Theory" ? "bg-warning text-dark" : "bg-primary") flex-shrink-0 mt-1">
+                                Q@(a.OrderNumber)
+                            </span>
+                            <span class="fw-medium">@a.QuestionText</span>
+                        </div>
+                        <div class="ms-3 flex-shrink-0">
+                            @if (a.IsCorrect)
+                            {
+                                <span class="badge bg-success"><i class="bi bi-check-lg me-1"></i>Correct</span>
+                            }
+                            else
+                            {
+                                <span class="badge bg-danger"><i class="bi bi-x-lg me-1"></i>Wrong</span>
+                            }
+                        </div>
+                    </div>
+
+                    @if (a.QuestionType == "Theory")
+                    {
+                        <div class="mt-2">
+                            <div class="mb-2">
+                                <div class="text-muted small fw-semibold mb-1">Model Answer:</div>
+                                <div class="bg-light rounded p-2 small">@(a.ModelAnswer ?? "—")</div>
+                            </div>
+                            <div class="mb-2">
+                                <div class="text-muted small fw-semibold mb-1">Student's Answer:</div>
+                                @if (!string.IsNullOrWhiteSpace(a.TheoryAnswer))
+                                {
+                                    <div class="bg-light rounded p-2 small @(a.IsCorrect ? "border border-success" : "border border-danger")">
+                                        @a.TheoryAnswer
+                                    </div>
+                                }
+                                else
+                                {
+                                    <div class="text-muted small fst-italic">No answer provided</div>
+                                }
+                            </div>
+                            @if (!string.IsNullOrWhiteSpace(a.AIFeedback))
+                            {
+                                <div class="d-flex align-items-start gap-2 mt-1">
+                                    <i class="bi bi-robot text-ncs mt-1 flex-shrink-0"></i>
+                                    <span class="small text-muted fst-italic">@a.AIFeedback</span>
+                                    @if (a.AIScore.HasValue)
+                                    {
+                                        <span class="badge bg-secondary ms-auto flex-shrink-0">AI: @((a.AIScore.Value * 100).ToString("F0"))%</span>
+                                    }
+                                </div>
+                            }
+                        </div>
+                    }
+                    else
+                    {
+                        <div class="mt-2">
+                            <div class="row g-2 mb-2">
+                                @foreach (var opt in new[] { ("A", a.OptionA), ("B", a.OptionB), ("C", a.OptionC), ("D", a.OptionD) })
+                                {
+                                    var isCorrect = opt.Item1 == a.CorrectOption;
+                                    var isSelected = opt.Item1 == a.SelectedOption;
+                                    var cls = isCorrect ? "bg-success text-white" : (isSelected && !isCorrect ? "bg-danger text-white" : "bg-light");
+                                    <div class="col-sm-6">
+                                        <div class="rounded p-2 small @cls">
+                                            <span class="fw-bold me-1">@opt.Item1.</span>@opt.Item2
+                                            @if (isCorrect) { <i class="bi bi-check-circle-fill ms-1"></i> }
+                                            @if (isSelected && !isCorrect) { <i class="bi bi-x-circle-fill ms-1"></i> }
+                                        </div>
+                                    </div>
+                                }
+                            </div>
+                            @if (string.IsNullOrEmpty(a.SelectedOption))
+                            {
+                                <div class="text-muted small fst-italic">Not answered</div>
+                            }
+                        </div>
+                    }
+                </div>
+            </div>
+        }
+    }
+</div>
+
+<style>
+    @@media print {
+        .sidebar, nav, footer, .btn, .d-print-none { display: none !important; }
+        .card { border: 1px solid #ddd !important; box-shadow: none !important; page-break-inside: avoid; }
+        body { font-size: 12px; }
+    }
+</style>

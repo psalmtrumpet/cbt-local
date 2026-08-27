@@ -1,0 +1,66 @@
+@model NCS.CBT.Models.ExamSession?
+@{
+    Layout = "_LoginLayout";
+    ViewData["Title"] = "Disqualified";
+}
+
+<div class="login-wrapper d-flex align-items-center justify-content-center min-vh-100">
+    <div class="card border-0 shadow-lg" style="max-width:520px;width:100%;">
+        <!-- Header -->
+        <div class="card-header border-0 text-center py-4" style="background:linear-gradient(135deg,#dc3545,#b02a37);">
+            <div class="mb-2">
+                <i class="bi bi-shield-x text-white" style="font-size:3rem;"></i>
+            </div>
+            <h4 class="fw-bold text-white mb-0">Disqualified</h4>
+            <p class="text-white-50 small mb-0">TLIMC Computer-Based Test</p>
+        </div>
+
+        <div class="card-body p-4 text-center">
+            <div class="alert alert-danger border-0 mb-4">
+                <i class="bi bi-exclamation-octagon-fill me-2"></i>
+                <strong>Your candidature has been disqualified</strong>
+            </div>
+
+            <p class="text-muted mb-3">
+                You were found in violation of examination proctoring rules on two occasions.
+                Your exam has been automatically submitted and your session has been flagged.
+            </p>
+
+            @if (Model != null)
+            {
+                <div class="rounded-3 p-3 mb-4 text-start" style="background:#f8f9fa;">
+                    <div class="row g-2 small">
+                        <div class="col-6">
+                            <span class="text-muted">Student</span>
+                            <div class="fw-semibold">@ViewBag.StudentName</div>
+                        </div>
+                        <div class="col-6">
+                            <span class="text-muted">Exam</span>
+                            <div class="fw-semibold">@Model.Exam?.Title</div>
+                        </div>
+                        <div class="col-6">
+                            <span class="text-muted">Score at Disqualification</span>
+                            <div class="fw-semibold text-danger">@Model.Score / @Model.TotalQuestions</div>
+                        </div>
+                        <div class="col-6">
+                            <span class="text-muted">Violations</span>
+                            <div class="fw-semibold text-danger">@Model.ViolationCount</div>
+                        </div>
+                    </div>
+                </div>
+            }
+
+            <p class="text-muted small mb-4">
+                Please contact the examination administrator if you believe this is an error.
+            </p>
+
+            <a asp-controller="Account" asp-action="StudentLogin" class="btn btn-outline-secondary px-5">
+                <i class="bi bi-box-arrow-left me-2"></i>Back to Login
+            </a>
+        </div>
+
+        <div class="card-footer border-0 text-center py-3 bg-light">
+            <small class="text-muted">&copy; @DateTime.Now.Year TLIMC</small>
+        </div>
+    </div>
+</div>

@@ -1,0 +1,208 @@
+@model List<StudentListViewModel>
+@{
+    Layout = "_Layout";
+    ViewData["Title"] = "Students";
+}
+
+@* Hidden form for bulk-delete — sits outside the table so there is no nesting *@
+<form id="bulkDeleteForm" asp-action="BulkDeleteStudents" method="post" style="display:none;">
+    @Html.AntiForgeryToken()
+    <div id="bulkHiddenInputs"></div>
+</form>
+
+<div class="container-fluid py-4">
+    @if (TempData["Success"] != null)
+    {
+        <div class="alert alert-success alert-dismissible fade show" role="alert">
+            <i class="bi bi-check-circle me-2"></i>@TempData["Success"]
+            <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+        </div>
+    }
+    @if (TempData["Error"] != null)
+    {
+        <div class="alert alert-danger alert-dismissible fade show" role="alert">
+            <i class="bi bi-exclamation-triangle me-2"></i>@TempData["Error"]
+            <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+        </div>
+    }
+
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <div class="page-header mb-0">
+            <h2 class="page-title"><i class="bi bi-people me-2"></i>Students</h2>
+            <p class="text-muted mb-0">@Model.Count registered student(s)</p>
+        </div>
+        <div class="d-flex gap-2">
+            <a asp-controller="Admin" asp-action="BulkUpload" class="btn btn-outline-primary">
+                <i class="bi bi-upload me-2"></i>Bulk Upload
+            </a>
+            <a asp-controller="Admin" asp-action="CreateStudent" class="btn btn-ncs-primary">
+                <i class="bi bi-person-plus me-2"></i>Add Student
+            </a>
+        </div>
+    </div>
+
+    @if (!Model.Any())
+    {
+        <div class="card ncs-card text-center py-5">
+            <i class="bi bi-person-x fs-1 text-muted d-block mb-3"></i>
+            <h5 class="text-muted">No students yet</h5>
+            <a asp-controller="Admin" asp-action="CreateStudent" class="btn btn-ncs-primary mx-auto mt-2" style="width:fit-content">
+                <i class="bi bi-person-plus me-2"></i>Add Student
+            </a>
+        </div>
+    }
+    else
+    {
+        <!-- Bulk action toolbar — shown when checkboxes are ticked -->
+        <div id="bulkToolbar" class="alert alert-danger d-none d-flex align-items-center gap-3 mb-3 py-2 px-3 shadow-sm">
+            <span id="selectedCount" class="fw-semibold"></span>
+            <button type="button" class="btn btn-danger btn-sm ms-auto" onclick="submitBulkDelete()">
+                <i class="bi bi-trash me-1"></i>Delete Selected
+            </button>
+            <button type="button" class="btn btn-outline-secondary btn-sm" onclick="clearSelection()">Cancel</button>
+        </div>
+
+        <div class="card ncs-card">
+            <div class="card-body p-0">
+                <div class="table-responsive">
+                    <table class="table table-hover mb-0">
+                        <thead class="table-light">
+                            <tr>
+                                <th style="width:40px;">
+                                    <input type="checkbox" id="selectAll" class="form-check-input mt-0" title="Select all" />
+                                </th>
+                                <th>Student No.</th>
+                                <th>Full Name</th>
+                                <th>Surname</th>
+                                <th>Assigned Exam</th>
+                                <th class="text-center">Status</th>
+                                <th class="text-center">Exam Status</th>
+                                <th class="text-end">Actions</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            @foreach (var s in Model)
+                            {
+                                <tr>
+                                    <td>
+                                        <input type="checkbox" class="form-check-input student-check mt-0"
+                                               data-id="@s.Id" onchange="updateToolbar()" />
+                                    </td>
+                                    <td><span class="badge bg-secondary fs-6">@s.StudentNumber</span></td>
+                                    <td class="fw-medium">@s.FullName</td>
+                                    <td>@s.Surname</td>
+                                    <td class="small">
+                                        @if (s.AssignedExamId.HasValue)
+                                        {
+                                            <span class="badge bg-success-subtle text-success border border-success-subtle">
+                                                @s.AssignedExamTitle
+                                            </span>
+                                        }
+                                        else
+                                        {
+                                            <span class="text-muted">—</span>
+                                        }
+                                    </td>
+                                    <td class="text-center">
+                                        @if (s.IsInSession)
+                                        {
+                                            <span class="badge bg-warning text-dark">
+                                                <i class="bi bi-activity me-1"></i>In Session
+                                            </span>
+                                        }
+                                        else
+                                        {
+                                            <span class="badge bg-light text-muted border">Offline</span>
+                                        }
+                                    </td>
+                                    <td class="text-center">
+                                        @if (s.HasCompletedExam)
+                                        {
+                                            <span class="badge bg-success">
+                                                <i class="bi bi-check-circle me-1"></i>Completed
+                                            </span>
+                                        }
+                                        else
+                                        {
+                                            <span class="badge bg-info text-dark">Pending</span>
+                                        }
+                                    </td>
+                                    <td class="text-end">
+                                        <div class="d-flex gap-1 justify-content-end flex-wrap">
+                                            @if (!string.IsNullOrEmpty(s.Email))
+                                            {
+                                                <form asp-controller="Admin" asp-action="ResendStudentCredentials"
+                                                      asp-route-id="@s.Id" method="post" class="d-inline"
+                                                      onsubmit="return confirm('Send login credentials to @s.Email? This will generate a new access code.')">
+                                                    @Html.AntiForgeryToken()
+                                                    <button type="submit" class="btn btn-sm btn-outline-primary" title="Send Credentials Email">
+                                                        <i class="bi bi-envelope"></i> Send Email
+                                                    </button>
+                                                </form>
+                                            }
+                                            <form asp-controller="Admin" asp-action="ResetStudentSession"
+                                                  asp-route-id="@s.Id" method="post" class="d-inline"
+                                                  onsubmit="return confirm('Reset session for @s.FullName? This will allow them to log in and take the exam again.')">
+                                                @Html.AntiForgeryToken()
+                                                <button type="submit" class="btn btn-sm btn-outline-warning" title="Reset Session">
+                                                    <i class="bi bi-arrow-counterclockwise"></i> Reset
+                                                </button>
+                                            </form>
+                                            <form asp-controller="Admin" asp-action="DeleteStudent"
+                                                  asp-route-id="@s.Id" method="post" class="d-inline"
+                                                  onsubmit="return confirm('Delete student @s.FullName? This cannot be undone.')">
+                                                @Html.AntiForgeryToken()
+                                                <button type="submit" class="btn btn-sm btn-outline-danger" title="Delete">
+                                                    <i class="bi bi-trash"></i>
+                                                </button>
+                                            </form>
+                                        </div>
+                                    </td>
+                                </tr>
+                            }
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    }
+</div>
+
+@section Scripts {
+<script>
+    document.getElementById('selectAll')?.addEventListener('change', function () {
+        document.querySelectorAll('.student-check').forEach(cb => cb.checked = this.checked);
+        updateToolbar();
+    });
+
+    function updateToolbar() {
+        const checked = document.querySelectorAll('.student-check:checked');
+        const toolbar = document.getElementById('bulkToolbar');
+        document.getElementById('selectedCount').textContent = `${checked.length} student(s) selected`;
+        toolbar.classList.toggle('d-none', checked.length === 0);
+    }
+
+    function clearSelection() {
+        document.querySelectorAll('.student-check').forEach(cb => cb.checked = false);
+        document.getElementById('selectAll').checked = false;
+        updateToolbar();
+    }
+
+    function submitBulkDelete() {
+        const ids = [...document.querySelectorAll('.student-check:checked')].map(cb => cb.dataset.id);
+        if (!ids.length) return;
+        if (!confirm(`Permanently delete ${ids.length} student(s)? This cannot be undone.`)) return;
+
+        const container = document.getElementById('bulkHiddenInputs');
+        container.innerHTML = '';
+        ids.forEach(id => {
+            const input = document.createElement('input');
+            input.type = 'hidden';
+            input.name = 'studentIds';
+            input.value = id;
+            container.appendChild(input);
+        });
+        document.getElementById('bulkDeleteForm').submit();
+    }
+</script>
+}

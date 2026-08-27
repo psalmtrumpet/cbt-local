@@ -1,0 +1,63 @@
+version: '3.9'
+
+services:
+  # ── SQL Server (internal only) ─────────────────────────────────────────────
+  db:
+    image: mcr.microsoft.com/mssql/server:2022-latest
+    container_name: ncs_cbt_db
+    environment:
+      SA_PASSWORD: "${DB_SA_PASSWORD}"
+      ACCEPT_EULA: "Y"
+      MSSQL_PID: "Express"
+    ports:
+      - "127.0.0.1:14330:1433"   # SSH-tunnel only — not exposed to internet
+    volumes:
+      - sqlserver_data:/var/opt/mssql
+    networks:
+      - ncs_cbt_internal
+    healthcheck:
+      test: /opt/mssql-tools18/bin/sqlcmd -S localhost -U sa -P "${DB_SA_PASSWORD}" -C -Q "SELECT 1" || exit 1
+      interval: 15s
+      timeout: 10s
+      retries: 10
+      start_period: 30s
+    restart: unless-stopped
+
+  # ── NCS CBT Web App ────────────────────────────────────────────────────────
+  web:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: ncs_cbt_web
+    environment:
+      ASPNETCORE_ENVIRONMENT: Production
+      ASPNETCORE_URLS: http://+:8080
+      ConnectionStrings__DefaultConnection: "Server=db,1433;Database=NcsCbtDb;User Id=sa;Password=${DB_SA_PASSWORD};TrustServerCertificate=True;MultipleActiveResultSets=true"
+      Anthropic__ApiKey: "${ANTHROPIC_API_KEY}"
+      Email__Smtp: "smtp.hostinger.com"
+      Email__Port: "587"
+      Email__Username: "info@tlimc.net"
+      Email__FromName: "NCS CBT"
+      Email__ExamUrl: "https://cbt.tlimc.net"
+      Email__Password: "${SMTP_PASSWORD}"
+      AzureFace__Endpoint: "${AZURE_FACE_ENDPOINT}"
+      AzureFace__Key: "${AZURE_FACE_KEY}"
+    volumes:
+      - ./data:/app/data   # snapshots + recording chunks persist outside the container
+    networks:
+      - ncs_cbt_internal       # talks to its own SQL Server
+      - tagalong_tagalong-network  # reachable by tagalong-nginx
+    depends_on:
+      db:
+        condition: service_healthy
+    restart: unless-stopped
+
+networks:
+  ncs_cbt_internal:
+    driver: bridge
+  tagalong_tagalong-network:
+    external: true   # already exists — created by the tagalong stack
+
+volumes:
+  sqlserver_data:
+    driver: local

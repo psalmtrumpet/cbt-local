@@ -1,0 +1,132 @@
+@model CreateQuestionViewModel
+@{
+    Layout = "_Layout";
+    ViewData["Title"] = "Add Question";
+}
+
+<div class="container py-4" style="max-width: 800px;">
+    <div class="d-flex align-items-center mb-4">
+        <a asp-controller="Admin" asp-action="Questions" asp-route-examId="@Model.ExamId" class="btn btn-sm btn-outline-secondary me-3">
+            <i class="bi bi-arrow-left"></i>
+        </a>
+        <div>
+            <h2 class="page-title mb-0"><i class="bi bi-plus-circle me-2"></i>Add Question</h2>
+            <p class="text-muted mb-0">@Model.ExamTitle</p>
+        </div>
+    </div>
+
+    <div class="card ncs-card">
+        <div class="card-body p-4">
+            <form asp-controller="Admin" asp-action="CreateQuestion" method="post">
+                <input asp-for="ExamId" type="hidden" />
+                <input asp-for="ExamTitle" type="hidden" />
+                <div asp-validation-summary="ModelOnly" class="alert alert-danger"></div>
+
+                <!-- Question Type -->
+                <div class="mb-4">
+                    <label class="form-label fw-medium">Question Type</label>
+                    <div class="d-flex gap-4">
+                        <div class="form-check">
+                            <input class="form-check-input" type="radio" asp-for="QuestionType" value="MCQ" id="typeMCQ" checked />
+                            <label class="form-check-label fw-semibold" for="typeMCQ">
+                                <i class="bi bi-list-ul me-1 text-ncs"></i>Multiple Choice (MCQ)
+                            </label>
+                        </div>
+                        <div class="form-check">
+                            <input class="form-check-input" type="radio" asp-for="QuestionType" value="Theory" id="typeTheory" />
+                            <label class="form-check-label fw-semibold" for="typeTheory">
+                                <i class="bi bi-pencil-square me-1 text-ncs"></i>Theory (AI Graded)
+                            </label>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Question Text -->
+                <div class="mb-4">
+                    <label asp-for="Text" class="form-label fw-medium fs-6"></label>
+                    <textarea asp-for="Text" class="form-control" rows="3"
+                              placeholder="Enter the question text here..." autofocus></textarea>
+                    <span asp-validation-for="Text" class="text-danger small"></span>
+                </div>
+
+                <!-- MCQ Fields -->
+                <div id="mcqFields">
+                    <div class="row g-3 mb-4">
+                        <div class="col-md-6">
+                            <label asp-for="OptionA" class="form-label fw-medium">
+                                <span class="option-badge option-a">A</span> Option A
+                            </label>
+                            <input asp-for="OptionA" class="form-control" placeholder="Enter option A" />
+                        </div>
+                        <div class="col-md-6">
+                            <label asp-for="OptionB" class="form-label fw-medium">
+                                <span class="option-badge option-b">B</span> Option B
+                            </label>
+                            <input asp-for="OptionB" class="form-control" placeholder="Enter option B" />
+                        </div>
+                        <div class="col-md-6">
+                            <label asp-for="OptionC" class="form-label fw-medium">
+                                <span class="option-badge option-c">C</span> Option C
+                            </label>
+                            <input asp-for="OptionC" class="form-control" placeholder="Enter option C" />
+                        </div>
+                        <div class="col-md-6">
+                            <label asp-for="OptionD" class="form-label fw-medium">
+                                <span class="option-badge option-d">D</span> Option D
+                            </label>
+                            <input asp-for="OptionD" class="form-control" placeholder="Enter option D" />
+                        </div>
+                    </div>
+                    <div class="mb-4">
+                        <label asp-for="CorrectOption" class="form-label fw-medium">Correct Answer</label>
+                        <div class="d-flex gap-3">
+                            @foreach (var opt in new[] { "A", "B", "C", "D" })
+                            {
+                                <div class="form-check">
+                                    <input class="form-check-input" type="radio" asp-for="CorrectOption"
+                                           value="@opt" id="opt@opt" />
+                                    <label class="form-check-label fw-bold" for="opt@opt">@opt</label>
+                                </div>
+                            }
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Theory Fields -->
+                <div id="theoryFields" style="display:none;">
+                    <div class="mb-4">
+                        <label asp-for="ModelAnswer" class="form-label fw-medium">
+                            <i class="bi bi-robot me-1 text-ncs"></i>Model Answer
+                            <small class="text-muted fw-normal ms-2">(Claude AI will compare student answers to this)</small>
+                        </label>
+                        <textarea asp-for="ModelAnswer" class="form-control" rows="4"
+                                  placeholder="Enter the ideal/model answer here. Students don't need to match word-for-word."></textarea>
+                        <span asp-validation-for="ModelAnswer" class="text-danger small"></span>
+                    </div>
+                </div>
+
+                <div class="d-flex gap-3">
+                    <button type="submit" class="btn btn-ncs-primary px-4">
+                        <i class="bi bi-plus-circle me-2"></i>Add Question
+                    </button>
+                    <button type="submit" name="addMore" value="true" class="btn btn-ncs-outline px-4">
+                        <i class="bi bi-plus-circle-dotted me-2"></i>Save &amp; Add Another
+                    </button>
+                    <a asp-controller="Admin" asp-action="Questions" asp-route-examId="@Model.ExamId" class="btn btn-outline-secondary">Done</a>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+@section Scripts {
+<script>
+    document.querySelectorAll('input[name="QuestionType"]').forEach(function(r) {
+        r.addEventListener('change', function() {
+            const isTheory = this.value === 'Theory';
+            document.getElementById('mcqFields').style.display = isTheory ? 'none' : '';
+            document.getElementById('theoryFields').style.display = isTheory ? '' : 'none';
+        });
+    });
+</script>
+}
