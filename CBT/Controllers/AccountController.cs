@@ -106,22 +106,15 @@ public class AccountController : Controller
         if (!ModelState.IsValid)
             return View(model);
 
-        var normalized = _userManager.NormalizeEmail(model.Email.Trim());
-        var hasher = new Microsoft.AspNetCore.Identity.PasswordHasher<ApplicationUser>();
+        var matricNumber = model.StudentNumber.Trim();
+        var surnameInput = model.Surname.Trim().ToUpperInvariant();
 
-        // Find the student whose email AND access code both match
-        // (multiple students can share an email when RequireUniqueEmail = false)
-        var candidates = await _userManager.Users
-            .Where(u => u.NormalizedEmail == normalized && !string.IsNullOrEmpty(u.AccessCodeHash))
-            .ToListAsync();
+        var student = await _userManager.Users
+            .FirstOrDefaultAsync(u => u.StudentNumber == matricNumber);
 
-        var student = candidates.FirstOrDefault(u =>
-            hasher.VerifyHashedPassword(u, u.AccessCodeHash!, model.AccessCode.Trim())
-                != Microsoft.AspNetCore.Identity.PasswordVerificationResult.Failed);
-
-        if (student == null)
+        if (student == null || (student.Surname ?? string.Empty).Trim().ToUpperInvariant() != surnameInput)
         {
-            ModelState.AddModelError(string.Empty, "Invalid credentials. Please check and try again.");
+            ModelState.AddModelError(string.Empty, "Invalid matric number or surname. Please check and try again.");
             return View(model);
         }
 

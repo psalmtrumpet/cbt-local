@@ -16,18 +16,18 @@ public class EmailService
 
     public async Task<bool> SendStudentCredentialsAsync(
         string toEmail, string studentName, string studentNumber,
-        string surname, string pin)
+        string surname, string? accessCode = null)
     {
         try
         {
-            var examUrl = _config["Email:ExamUrl"] ?? "https://cbt.tlimc.net";
+            var examUrl = _config["Email:ExamUrl"] ?? "http://localhost:8080";
             using var client = BuildClient();
             using var message = new MailMessage
             {
                 From      = new MailAddress(_config["Email:Username"]!, _config["Email:FromName"] ?? "NCS CBT"),
-                Subject   = "NCS CBT — Your Examination Login Details",
+                Subject   = "CBT — Your Examination Login Details",
                 IsBodyHtml = true,
-                Body      = BuildBody(studentName, studentNumber, surname, pin, examUrl)
+                Body      = BuildBody(studentName, studentNumber, surname, examUrl)
             };
             message.To.Add(new MailAddress(toEmail, studentName));
             await client.SendMailAsync(message);
@@ -166,7 +166,7 @@ public class EmailService
         """;
 
     private static string BuildBody(
-        string name, string number, string surname, string pin, string examUrl) => $"""
+        string name, string number, string surname, string examUrl) => $"""
         <!DOCTYPE html>
         <html>
         <head><meta charset="utf-8"></head>
@@ -179,10 +179,10 @@ public class EmailService
                 <tr>
                   <td style="background:#1a3c5e;padding:30px 40px;border-radius:8px 8px 0 0;">
                     <h1 style="margin:0;color:#ffffff;font-size:22px;">
-                      NCS CBT — Examination Portal
+                      CBT — Examination Portal
                     </h1>
                     <p style="margin:6px 0 0;color:#a8c4e0;font-size:13px;">
-                      Nigeria Computer Society Computer-Based Test
+                      Computer-Based Test
                     </p>
                   </td>
                 </tr>
@@ -195,29 +195,26 @@ public class EmailService
                     </p>
                     <p style="margin:0 0 24px;font-size:15px;color:#555;line-height:1.6;">
                       Your examination account has been created. Use the details below to log in
-                      and take your examination.
+                      on the examination day.
                     </p>
 
                     <!-- Login credentials -->
                     <table width="100%" cellpadding="0" cellspacing="0"
                            style="background:#f0f4f8;border-radius:8px;padding:20px;border:1px solid #dce3ea;">
                       <tr>
-                        <td style="padding:8px 16px;color:#666;font-size:13px;width:40%;">Login Email</td>
-                        <td style="padding:8px 16px;font-weight:bold;font-size:15px;color:#1a3c5e;">This email address</td>
+                        <td style="padding:8px 16px;color:#666;font-size:13px;width:40%;">Matric Number</td>
+                        <td style="padding:8px 16px;font-weight:bold;font-size:18px;color:#1a3c5e;">{number}</td>
                       </tr>
                       <tr>
-                        <td style="padding:8px 16px;color:#666;font-size:13px;border-top:1px solid #dce3ea;">Access PIN</td>
+                        <td style="padding:8px 16px;color:#666;font-size:13px;border-top:1px solid #dce3ea;">Surname</td>
                         <td style="padding:8px 16px;border-top:1px solid #dce3ea;">
-                          <span style="font-size:28px;font-weight:bold;letter-spacing:6px;color:#1a3c5e;
+                          <span style="font-size:22px;font-weight:bold;letter-spacing:3px;color:#1a3c5e;
                                        background:#e8f0fe;padding:8px 16px;border-radius:6px;display:inline-block;">
-                            {pin}
+                            {surname.ToUpper()}
                           </span>
                         </td>
                       </tr>
                     </table>
-
-                    <!-- Reference info -->
-                    <p style="margin:20px 0 4px;font-size:12px;color:#999;">For reference: Student No. {number} &mdash; {surname.ToUpper()}</p>
 
                     <!-- CTA button -->
                     <div style="margin:24px 0 20px;text-align:center;">
@@ -229,8 +226,8 @@ public class EmailService
                     </div>
 
                     <p style="margin:0;font-size:13px;color:#999;text-align:center;line-height:1.6;">
-                      Keep this email confidential. Do not share your PIN with anyone.<br>
-                      If you did not expect this email, please ignore it.
+                      You will be asked for your Matric Number and Surname at the exam venue.<br>
+                      If you did not expect this email, please contact your administrator.
                     </p>
                   </td>
                 </tr>
@@ -240,7 +237,7 @@ public class EmailService
                   <td style="background:#f0f4f8;padding:16px 40px;border-radius:0 0 8px 8px;
                               border:1px solid #e0e0e0;border-top:none;text-align:center;">
                     <p style="margin:0;font-size:12px;color:#aaa;">
-                      &copy; {DateTime.UtcNow.Year} Nigeria Computer Society (NCS) &mdash; {examUrl}
+                      &copy; {DateTime.UtcNow.Year} &mdash; {examUrl}
                     </p>
                   </td>
                 </tr>

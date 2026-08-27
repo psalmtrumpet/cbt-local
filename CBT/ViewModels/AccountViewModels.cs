@@ -19,13 +19,11 @@ public class LoginViewModel
 
 public class StudentLoginViewModel
 {
-    [Required(ErrorMessage = "Email address is required")]
-    [EmailAddress(ErrorMessage = "Enter a valid email address")]
-    [Display(Name = "Email Address")]
-    public string Email { get; set; } = string.Empty;
+    [Required(ErrorMessage = "Matric number is required")]
+    [Display(Name = "Matric Number")]
+    public string StudentNumber { get; set; } = string.Empty;
 
-    [Required(ErrorMessage = "Access PIN is required")]
-    [Display(Name = "Access PIN")]
-    [DataType(DataType.Password)]
-    public string AccessCode { get; set; } = string.Empty;
+    [Required(ErrorMessage = "Surname is required")]
+    [Display(Name = "Surname")]
+    public string Surname { get; set; } = string.Empty;
 }

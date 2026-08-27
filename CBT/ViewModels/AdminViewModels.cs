@@ -125,7 +125,6 @@ public class BulkUploadResultItem
     public int Row { get; set; }
     public string StudentNumber { get; set; } = string.Empty;
     public string FullName { get; set; } = string.Empty;
-    public string AccessCode { get; set; } = string.Empty;
     public bool Success { get; set; }
     public bool EmailSent { get; set; }
     public string? Error { get; set; }

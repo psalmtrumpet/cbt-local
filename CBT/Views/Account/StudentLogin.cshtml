@@ -16,7 +16,7 @@
 
         <div class="login-body-section">
             <h5 class="text-center mb-1 fw-semibold text-dark">Student Login</h5>
-            <p class="text-center text-muted small mb-4">Enter your email address and the PIN sent to you</p>
+            <p class="text-center text-muted small mb-4">Enter your matric number and surname</p>
 
             @{
                 var errorType = TempData["ErrorType"]?.ToString();
@@ -70,22 +70,21 @@
                 <div asp-validation-summary="ModelOnly" class="alert alert-danger small"></div>
 
                 <div class="mb-3">
-                    <label asp-for="Email" class="form-label fw-medium"></label>
+                    <label asp-for="StudentNumber" class="form-label fw-medium"></label>
                     <div class="input-group">
-                        <span class="input-group-text"><i class="bi bi-envelope"></i></span>
-                        <input asp-for="Email" class="form-control" type="email" placeholder="your.email@example.com" autocomplete="email" autofocus />
+                        <span class="input-group-text"><i class="bi bi-person-badge"></i></span>
+                        <input asp-for="StudentNumber" class="form-control" placeholder="e.g. 259074001" autocomplete="off" autofocus />
                     </div>
-                    <span asp-validation-for="Email" class="text-danger small"></span>
+                    <span asp-validation-for="StudentNumber" class="text-danger small"></span>
                 </div>
 
                 <div class="mb-4">
-                    <label asp-for="AccessCode" class="form-label fw-medium"></label>
+                    <label asp-for="Surname" class="form-label fw-medium"></label>
                     <div class="input-group">
-                        <span class="input-group-text"><i class="bi bi-key"></i></span>
-                        <input asp-for="AccessCode" class="form-control" placeholder="6-digit PIN" autocomplete="off" />
+                        <span class="input-group-text"><i class="bi bi-person"></i></span>
+                        <input asp-for="Surname" class="form-control" placeholder="Your surname" autocomplete="off" />
                     </div>
-                    <span asp-validation-for="AccessCode" class="text-danger small"></span>
-                    <div class="form-text">PIN was sent to your email when your account was created</div>
+                    <span asp-validation-for="Surname" class="text-danger small"></span>
                 </div>
 
                 <button type="submit" class="btn btn-ncs-primary w-100 py-2 fw-semibold">

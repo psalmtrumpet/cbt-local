@@ -5,9 +5,7 @@ using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using NCS.CBT.Data;
 using NCS.CBT.Models;
-using NCS.CBT.Services;
 using NCS.CBT.ViewModels;
-using System.Security.Cryptography;
 
 namespace NCS.CBT.Controllers;
 
@@ -28,25 +26,18 @@ public class AdminController : Controller
 
     private readonly ApplicationDbContext _context;
     private readonly UserManager<ApplicationUser> _userManager;
-    private readonly EmailService _emailService;
     private readonly IWebHostEnvironment _env;
     private readonly IConfiguration _configuration;
 
-    public AdminController(ApplicationDbContext context, UserManager<ApplicationUser> userManager, EmailService emailService, IWebHostEnvironment env, IConfiguration configuration)
+    public AdminController(ApplicationDbContext context, UserManager<ApplicationUser> userManager, IWebHostEnvironment env, IConfiguration configuration)
     {
         _context = context;
         _userManager = userManager;
-        _emailService = emailService;
         _env = env;
         _configuration = configuration;
     }
 
-    private static string GenerateAccessCode()
-    {
-        var bytes = new byte[4];
-        RandomNumberGenerator.Fill(bytes);
-        return (BitConverter.ToUInt32(bytes) % 1_000_000).ToString("D6");
-    }
+
 
     public async Task<IActionResult> Dashboard()
     {
@@ -562,7 +553,6 @@ public class AdminController : Controller
         }
 
         var results = new List<BulkUploadResultItem>();
-        var hasher = new Microsoft.AspNetCore.Identity.PasswordHasher<ApplicationUser>();
 
         using (excelStream)
         using (var wb = new XLWorkbook(excelStream))
@@ -598,8 +588,7 @@ public class AdminController : Controller
                     continue;
                 }
 
-                var accessCode = GenerateAccessCode();
-                var emailAddr  = !string.IsNullOrEmpty(emailVal) ? emailVal : $"{studentNumber.ToLower()}@ncs.cbt";
+                var emailAddr = !string.IsNullOrEmpty(emailVal) ? emailVal : $"{studentNumber.ToLower()}@ncs.cbt";
 
                 var student = new ApplicationUser
                 {
@@ -611,7 +600,6 @@ public class AdminController : Controller
                     EmailConfirmed = true,
                     CreatedAt      = DateTime.UtcNow
                 };
-                student.AccessCodeHash = hasher.HashPassword(student, accessCode);
 
                 var createResult = await _userManager.CreateAsync(student, $"Student@{studentNumber}");
                 if (!createResult.Succeeded)
@@ -631,14 +619,7 @@ public class AdminController : Controller
                     await _userManager.UpdateAsync(student);
                 }
 
-                item.AccessCode = accessCode;
                 item.Success = true;
-
-                if (!string.IsNullOrEmpty(emailVal))
-                {
-                    _ = _emailService.SendStudentCredentialsAsync(emailVal, fullName, studentNumber, surname, accessCode);
-                    item.EmailSent = true;
-                }
 
                 results.Add(item);
                 row++;
@@ -708,7 +689,6 @@ public class AdminController : Controller
             return View(model);
         }
 
-        var accessCode = GenerateAccessCode();
         var email = !string.IsNullOrWhiteSpace(model.Email)
             ? model.Email.Trim()
             : $"{model.StudentNumber.ToLower()}@ncs.cbt";
@@ -724,9 +704,6 @@ public class AdminController : Controller
             CreatedAt = DateTime.UtcNow
         };
 
-        var hasher = new Microsoft.AspNetCore.Identity.PasswordHasher<ApplicationUser>();
-        student.AccessCodeHash = hasher.HashPassword(student, accessCode);
-
         var result = await _userManager.CreateAsync(student, $"Student@{model.StudentNumber}");
         if (!result.Succeeded)
         {
@@ -737,13 +714,7 @@ public class AdminController : Controller
 
         await _userManager.AddToRoleAsync(student, "Student");
 
-        if (!string.IsNullOrWhiteSpace(model.Email))
-            _ = _emailService.SendStudentCredentialsAsync(
-                model.Email.Trim(), model.FullName, model.StudentNumber,
-                model.Surname.ToUpper(), accessCode);
-
-        var emailNote = !string.IsNullOrWhiteSpace(model.Email) ? " Credentials email queued." : "";
-        TempData["Success"] = $"Student registered. Number: {model.StudentNumber} | Surname: {model.Surname.ToUpper()} | Access Code: {accessCode}{emailNote}";
+        TempData["Success"] = $"Student registered. Login: Matric {model.StudentNumber} | Surname {model.Surname.ToUpper()}";
         return RedirectToAction("Students");
     }
 
@@ -805,28 +776,10 @@ public class AdminController : Controller
         var student = await _userManager.FindByIdAsync(id);
         if (student == null) return NotFound();
 
-        if (string.IsNullOrEmpty(student.Email) || student.Email.EndsWith("@ncs.cbt"))
-        {
-            TempData["Error"] = "This student has no email address — credentials cannot be sent.";
-            return RedirectToAction("Students");
-        }
+        var matric  = student.StudentNumber ?? student.UserName ?? "";
+        var surname = (student.Surname ?? "").ToUpper();
 
-        var accessCode = GenerateAccessCode();
-        var hasher = new Microsoft.AspNetCore.Identity.PasswordHasher<ApplicationUser>();
-        student.AccessCodeHash = hasher.HashPassword(student, accessCode);
-        await _userManager.UpdateAsync(student);
-
-        var sent = await _emailService.SendStudentCredentialsAsync(
-            student.Email,
-            student.FullName,
-            student.StudentNumber ?? student.UserName ?? "",
-            student.Surname ?? "",
-            accessCode);
-
-        TempData[sent ? "Success" : "Error"] = sent
-            ? $"Credentials email sent to {student.Email}."
-            : $"Failed to send email to {student.Email}. Check SMTP settings.";
-
+        TempData["Success"] = $"Student login — Matric: {matric} | Surname: {surname}";
         return RedirectToAction("Students");
     }
 
