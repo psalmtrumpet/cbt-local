@@ -209,23 +209,6 @@ public class AccountController : Controller
         student.SessionStartTime = DateTime.UtcNow;
         await _userManager.UpdateAsync(student);
 
-        // Assign to the proctor (Viewer role) who currently has the fewest active students
-        string? assignedProctorId = null;
-        var proctors = await _userManager.GetUsersInRoleAsync("Viewer");
-        if (proctors.Any())
-        {
-            var activeCounts = await _context.ExamSessions
-                .Where(s => !s.IsSubmitted && s.AssignedProctorId != null)
-                .GroupBy(s => s.AssignedProctorId)
-                .Select(g => new { ProctorId = g.Key, Count = g.Count() })
-                .ToListAsync();
-
-            assignedProctorId = proctors
-                .OrderBy(p => activeCounts.FirstOrDefault(a => a.ProctorId == p.Id)?.Count ?? 0)
-                .ThenBy(p => p.FullName)
-                .First().Id;
-        }
-
         // Create exam session
         var session = new ExamSession
         {
@@ -234,8 +217,7 @@ public class AccountController : Controller
             StartTime = DateTime.UtcNow,
             IsActive = true,
             IsSubmitted = false,
-            TotalQuestions = activeExam.Questions.Count,
-            AssignedProctorId = assignedProctorId
+            TotalQuestions = activeExam.Questions.Count
         };
         _context.ExamSessions.Add(session);
         await _context.SaveChangesAsync();

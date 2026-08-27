@@ -11,8 +11,6 @@ public class ApplicationUser : IdentityUser
     public bool IsInSession { get; set; } = false;
     public DateTime? SessionStartTime { get; set; }
     public string? AccessCodeHash { get; set; }
-    public string? PassportPhotoPath { get; set; }
-    public string? ExamPhotoPath { get; set; }   // photo captured at start of exam for proctor review
     public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
     public int? AssignedExamId { get; set; }
     public Exam? AssignedExam { get; set; }

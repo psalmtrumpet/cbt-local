@@ -4,7 +4,6 @@ using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.RateLimiting;
 using Microsoft.EntityFrameworkCore;
 using NCS.CBT.Data;
-using NCS.CBT.Hubs;
 using NCS.CBT.Models;
 using NCS.CBT.Services;
 using System.Threading.RateLimiting;
@@ -55,9 +54,6 @@ builder.Services.ConfigureApplicationCookie(options =>
     options.SlidingExpiration = true;
 });
 
-// ─── SIGNALR ──────────────────────────────────────────────────────────────────
-builder.Services.AddSignalR();
-
 // ─── MVC ──────────────────────────────────────────────────────────────────────
 builder.Services.AddControllersWithViews();
 
@@ -76,7 +72,6 @@ builder.Services.AddHttpClient<AIGradingService>();
 
 // ─── EMAIL ────────────────────────────────────────────────────────────────────
 builder.Services.AddScoped<EmailService>();
-builder.Services.AddScoped<FaceVerificationService>();
 builder.Services.AddHostedService<NCS.CBT.Services.SessionExpiryService>();
 
 // ─── RATE LIMITING ────────────────────────────────────────────────────────────
@@ -160,12 +155,7 @@ app.Use(async (ctx, next) =>
     await next();
 });
 
-// Allow serving extensionless files (needed for face-api.js model shard files)
-app.UseStaticFiles(new StaticFileOptions
-{
-    ServeUnknownFileTypes = true,
-    DefaultContentType = "application/octet-stream"
-});
+app.UseStaticFiles();
 app.UseRateLimiter();
 app.UseRouting();
 app.UseSession();
@@ -176,7 +166,5 @@ app.UseAuthorization();
 app.MapControllerRoute(
     name: "default",
     pattern: "{controller=Account}/{action=Login}/{id?}");
-
-app.MapHub<ExamHub>("/examHub");
 
 app.Run();

@@ -2,10 +2,8 @@ using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.RateLimiting;
-using Microsoft.AspNetCore.SignalR;
 using Microsoft.EntityFrameworkCore;
 using NCS.CBT.Data;
-using NCS.CBT.Hubs;
 using NCS.CBT.Models;
 using NCS.CBT.Services;
 using NCS.CBT.ViewModels;
@@ -17,86 +15,15 @@ public class StudentController : Controller
 {
     private readonly ApplicationDbContext _context;
     private readonly UserManager<ApplicationUser> _userManager;
-    private readonly IHubContext<ExamHub> _hubContext;
     private readonly AIGradingService _aiGrading;
-    private readonly IWebHostEnvironment _env;
-    private readonly FaceVerificationService _faceVerify;
 
     public StudentController(ApplicationDbContext context,
         UserManager<ApplicationUser> userManager,
-        IHubContext<ExamHub> hubContext,
-        AIGradingService aiGrading,
-        IWebHostEnvironment env,
-        FaceVerificationService faceVerify)
+        AIGradingService aiGrading)
     {
         _context = context;
         _userManager = userManager;
-        _hubContext = hubContext;
         _aiGrading = aiGrading;
-        _env = env;
-        _faceVerify = faceVerify;
-    }
-
-    // ── Serve the authenticated student's own passport photo ──────────────────
-    [HttpGet]
-    public async Task<IActionResult> PassportPhoto()
-    {
-        var user = await _userManager.GetUserAsync(User);
-        if (user?.PassportPhotoPath == null) return NotFound();
-
-        var filePath = Path.Combine(_env.ContentRootPath, "data", "passports", user.PassportPhotoPath);
-        if (!System.IO.File.Exists(filePath)) return NotFound();
-
-        var contentType = filePath.EndsWith(".png", StringComparison.OrdinalIgnoreCase) ? "image/png" : "image/jpeg";
-        return PhysicalFile(filePath, contentType);
-    }
-
-    // ── Capture exam photo and verify identity via Azure Face API ─────────────
-    [HttpPost]
-    public async Task<IActionResult> VerifyFace(IFormFile photo)
-    {
-        var user = await _userManager.GetUserAsync(User);
-        if (user == null) return Unauthorized();
-
-        bool verified = true;
-        string message = "Photo captured. You may begin.";
-
-        if (photo != null && photo.Length > 0)
-        {
-            // Read bytes once so we can save to disk AND pass to the face service
-            using var ms = new MemoryStream();
-            await photo.CopyToAsync(ms);
-            var photoBytes = ms.ToArray();
-
-            // Save exam photo regardless of verification result (proctor review)
-            try
-            {
-                var dir = Path.Combine(_env.ContentRootPath, "data", "exam-photos");
-                Directory.CreateDirectory(dir);
-                var fileName = $"{user.StudentNumber ?? user.Id}_exam.jpg";
-                var filePath = Path.Combine(dir, fileName);
-                await System.IO.File.WriteAllBytesAsync(filePath, photoBytes);
-                user.ExamPhotoPath = fileName;
-                await _userManager.UpdateAsync(user);
-            }
-            catch { /* don't block student if save fails */ }
-
-            // Run Azure Face verification if student has a passport photo
-            if (!string.IsNullOrEmpty(user.PassportPhotoPath))
-            {
-                var passportPath = Path.Combine(_env.ContentRootPath, "data", "passports", user.PassportPhotoPath);
-                if (System.IO.File.Exists(passportPath))
-                {
-                    using var liveStream = new MemoryStream(photoBytes);
-                    var (match, _, msg) = await _faceVerify.VerifyAsync(passportPath, liveStream);
-                    verified = match;
-                    // Only surface the message to the student on failure (don't expose internal state)
-                    if (!match) message = msg;
-                }
-            }
-        }
-
-        return Json(new { verified, message });
     }
 
     public async Task<IActionResult> Rules(int sessionId)
@@ -115,7 +42,6 @@ public class StudentController : Controller
         ViewBag.ExamTitle = session.Exam.Title;
         ViewBag.Duration = session.Exam.DurationMinutes;
         ViewBag.SessionId = sessionId;
-        ViewBag.HasPassport = !string.IsNullOrEmpty(user.PassportPhotoPath);
         return View();
     }
 
@@ -297,21 +223,6 @@ public class StudentController : Controller
             .Sum(a => (int)(a.AIScore ?? 0));
         await _context.SaveChangesAsync();
 
-        // Broadcast to the assigned proctor + any admin viewers
-        var update = new StudentProgressUpdate
-        {
-            SessionId = session.Id,
-            StudentId = user.Id,
-            StudentName = user.FullName,
-            StudentNumber = user.StudentNumber ?? "",
-            QuestionsAnswered = allAnswers.Count,
-            TotalQuestions = session.TotalQuestions,
-            CurrentScore = session.Score,
-            IsSubmitted = false,
-            ExamTitle = session.Exam.Title
-        };
-        await BroadcastToProctorAndAdmins(_hubContext, session.AssignedProctorId, "StudentProgressUpdated", update);
-
         return Json(new { success = true, answered = allAnswers.Count });
     }
 
@@ -388,31 +299,6 @@ public class StudentController : Controller
 
         await _userManager.UpdateAsync(user);
         await _context.SaveChangesAsync();
-
-        // Broadcast completion to viewers
-        var update = new StudentProgressUpdate
-        {
-            SessionId = session.Id,
-            StudentId = user.Id,
-            StudentName = user.FullName,
-            StudentNumber = user.StudentNumber ?? "",
-            QuestionsAnswered = allAnswers.Count,
-            TotalQuestions = session.TotalQuestions,
-            CurrentScore = session.Score,
-            IsSubmitted = true,
-            ExamTitle = session.Exam?.Title ?? "",
-            ViolationCount = session.ViolationCount,
-            IsDisqualified = session.IsDisqualified
-        };
-        await BroadcastToProctorAndAdmins(_hubContext, session.AssignedProctorId, "StudentSubmitted", update);
-    }
-
-    // Send to assigned proctor's group AND the admin "viewers" group
-    private static async Task BroadcastToProctorAndAdmins(IHubContext<ExamHub> hub, string? proctorId, string method, object data)
-    {
-        if (!string.IsNullOrEmpty(proctorId))
-            await hub.Clients.Group($"viewer-{proctorId}").SendAsync(method, data);
-        await hub.Clients.Group("viewers").SendAsync(method, data);
     }
 
     public async Task<IActionResult> Completed(int sessionId)
@@ -426,32 +312,6 @@ public class StudentController : Controller
 
         if (session == null)
             return RedirectToAction("Login", "Account");
-
-        ViewBag.StudentName = user.FullName;
-        return View(session);
-    }
-
-    public async Task<IActionResult> Disqualified(int sessionId = 0)
-    {
-        var user = await _userManager.GetUserAsync(User);
-        if (user == null) return Unauthorized();
-
-        ExamSession? session = null;
-        if (sessionId > 0)
-        {
-            session = await _context.ExamSessions
-                .Include(s => s.Exam)
-                .FirstOrDefaultAsync(s => s.Id == sessionId && s.StudentId == user.Id);
-        }
-        else
-        {
-            // Find most recent disqualified session
-            session = await _context.ExamSessions
-                .Include(s => s.Exam)
-                .Where(s => s.StudentId == user.Id && s.IsDisqualified)
-                .OrderByDescending(s => s.EndTime)
-                .FirstOrDefaultAsync();
-        }
 
         ViewBag.StudentName = user.FullName;
         return View(session);

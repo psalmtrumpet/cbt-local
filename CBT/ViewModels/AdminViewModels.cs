@@ -106,60 +106,6 @@ public class CreateStudentViewModel
     [EmailAddress(ErrorMessage = "Enter a valid email address")]
     [Display(Name = "Email Address")]
     public string? Email { get; set; }
-
-    [Display(Name = "Passport Photo")]
-    public IFormFile? PassportPhoto { get; set; }
-}
-
-public class BulkPassportUploadViewModel
-{
-    [Required(ErrorMessage = "Please select a ZIP file")]
-    [Display(Name = "ZIP file (photos named by student number, e.g. NCS001.jpg)")]
-    public IFormFile? ZipFile { get; set; }
-}
-
-public class ProctorListViewModel
-{
-    public string Id { get; set; } = string.Empty;
-    public string FullName { get; set; } = string.Empty;
-    public string Email { get; set; } = string.Empty;
-    public DateTime CreatedAt { get; set; }
-}
-
-public class CreateProctorViewModel
-{
-    [Required(ErrorMessage = "Full name is required")]
-    [Display(Name = "Full Name")]
-    public string FullName { get; set; } = string.Empty;
-
-    [Required(ErrorMessage = "Email is required")]
-    [EmailAddress(ErrorMessage = "Enter a valid email address")]
-    [Display(Name = "Email Address")]
-    public string Email { get; set; } = string.Empty;
-
-    [Required(ErrorMessage = "Password is required")]
-    [MinLength(6, ErrorMessage = "Password must be at least 6 characters")]
-    [Display(Name = "Password")]
-    [DataType(DataType.Password)]
-    public string Password { get; set; } = string.Empty;
-
-    [Required(ErrorMessage = "Please confirm the password")]
-    [Compare("Password", ErrorMessage = "Passwords do not match")]
-    [Display(Name = "Confirm Password")]
-    [DataType(DataType.Password)]
-    public string ConfirmPassword { get; set; } = string.Empty;
-}
-
-public class ResetProctorPasswordViewModel
-{
-    public string Id { get; set; } = string.Empty;
-    public string FullName { get; set; } = string.Empty;
-
-    [Required(ErrorMessage = "New password is required")]
-    [MinLength(6, ErrorMessage = "Password must be at least 6 characters")]
-    [Display(Name = "New Password")]
-    [DataType(DataType.Password)]
-    public string NewPassword { get; set; } = string.Empty;
 }
 
 public class BulkUploadViewModel
@@ -250,7 +196,6 @@ public class ExamResultViewModel
     public DateTime StartTime { get; set; }
     public DateTime? EndTime { get; set; }
     public bool IsSubmitted { get; set; }
-    public bool IsDisqualified { get; set; }
     public TimeSpan? Duration => EndTime.HasValue ? EndTime.Value - StartTime : null;
     public int Rank { get; set; }
 }
@@ -266,7 +211,6 @@ public class SessionDetailViewModel
     public double Percentage => TotalQuestions > 0 ? Math.Round((double)Score / TotalQuestions * 100, 1) : 0;
     public DateTime StartTime { get; set; }
     public DateTime? EndTime { get; set; }
-    public bool IsDisqualified { get; set; }
     public List<AnswerDetailViewModel> Answers { get; set; } = new();
 }
 

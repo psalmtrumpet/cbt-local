@@ -1,7 +1,6 @@
 @{
     Layout = "_LoginLayout";
     ViewData["Title"] = "Exam Rules";
-    bool hasPassport = ViewBag.HasPassport == true;
 }
 
 <div class="login-wrapper d-flex align-items-center justify-content-center min-vh-100 py-4">
@@ -33,183 +32,22 @@
                 <li>The exam will <strong>auto-submit</strong> when the timer reaches zero.</li>
                 <li>Do <strong>not</strong> refresh the page or use the browser back button during the exam.</li>
                 <li>You are allowed to take this exam <strong>only once</strong>. A second login will be blocked.</li>
+                <li>Physical invigilators are present in the room. Follow their instructions at all times.</li>
             </ol>
-
-            <!-- Proctoring Rules -->
-            <h6 class="fw-bold text-danger mb-3"><i class="bi bi-camera-video me-2"></i>Proctoring &amp; Integrity Rules</h6>
-            <ul class="mb-4" style="line-height:2;">
-                <li>Your <strong>camera and microphone</strong> will be active throughout the exam. Ensure your face is clearly visible.</li>
-                <li>Sit in a <strong>well-lit environment</strong> facing the camera directly.</li>
-                <li>Do <strong>not</strong> switch browser tabs, minimise the window, or open other applications.</li>
-                <li>Do <strong>not</strong> allow another person into view of your camera.</li>
-                <li>Excessive <strong>head movement</strong>, lip movement, or looking away from the screen is flagged automatically.</li>
-                <li>Opening <strong>browser developer tools</strong> (F12) is treated as a violation.</li>
-                <li>The proctor may disqualify you if violations are detected.</li>
-            </ul>
 
             <div class="alert alert-warning border-0 small mb-4">
                 <i class="bi bi-exclamation-triangle-fill me-2"></i>
                 By clicking <strong>I Agree — Begin Exam</strong>, you confirm that you have read and understood these rules.
             </div>
 
-            @if (hasPassport)
-            {
-                <!-- Identity Verification Panel -->
-                <div id="verifyPanel" class="card border-ncs mb-4">
-                    <div class="card-header" style="background:var(--ncs-green-pale);">
-                        <h6 class="mb-0 fw-bold text-ncs">
-                            <i class="bi bi-person-bounding-box me-2"></i>Identity Photo Required
-                        </h6>
-                        <small class="text-muted">Face the camera clearly, then click <strong>Take Photo &amp; Continue</strong>. Your photo will be reviewed by the proctor.</small>
-                    </div>
-                    <div class="card-body text-center p-3">
-                        <div id="verifyStatus" class="mb-3">
-                            <span class="badge bg-secondary fs-6"><i class="bi bi-camera me-1"></i>Starting camera...</span>
-                        </div>
-
-                        <div style="position:relative;display:inline-block;">
-                            <video id="verifyVideo" autoplay muted playsinline
-                                   style="width:280px;height:210px;object-fit:cover;border-radius:8px;background:#000;display:none;"></video>
-                            <canvas id="verifyCanvas" style="display:none;"></canvas>
-                        </div>
-
-                        <div class="mt-3 d-flex gap-2 justify-content-center flex-wrap">
-                            <button type="button" id="startCameraBtn" class="btn btn-outline-ncs"
-                                    onclick="startVerifyCamera()">
-                                <i class="bi bi-camera me-1"></i>Start Camera
-                            </button>
-                            <button type="button" id="verifyBtn" class="btn btn-ncs-primary" disabled
-                                    onclick="runVerification()">
-                                <i class="bi bi-camera2 me-1"></i>Take Photo &amp; Continue
-                            </button>
-                        </div>
-                        <div id="verifyMessage" class="mt-2 small"></div>
-                    </div>
-                </div>
-            }
         </div>
 
         <div class="card-footer border-0 p-4 pt-0 bg-white">
             <a href="@Url.Action("TakeExam", "Student", new { sessionId = ViewBag.SessionId, questionIndex = 0 })"
-               class="btn btn-ncs-primary w-100 py-3 fs-5 @(hasPassport ? "d-none" : "")"
+               class="btn btn-ncs-primary w-100 py-3 fs-5"
                id="beginExamBtn">
                 <i class="bi bi-play-circle me-2"></i>I Agree — Begin Exam
             </a>
-            @if (hasPassport)
-            {
-                <div class="text-center text-muted small mt-2" id="verifyHint">
-                    Take your identity photo above to unlock the Begin Exam button.
-                </div>
-            }
         </div>
     </div>
 </div>
-
-@if (hasPassport)
-{
-    <script>
-        let verifyStream = null;
-
-        window.addEventListener('DOMContentLoaded', startVerifyCamera);
-
-        async function startVerifyCamera() {
-            const video = document.getElementById('verifyVideo');
-            const btn   = document.getElementById('startCameraBtn');
-            try {
-                verifyStream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: 'user', width: 640, height: 480 }, audio: false });
-                video.srcObject = verifyStream;
-                video.style.display = 'block';
-                btn.disabled = true;
-                btn.innerHTML = '<i class="bi bi-camera-fill me-1"></i>Camera On';
-
-                // Wait until the first real frame is ready before enabling capture
-                await new Promise(resolve => {
-                    if (video.readyState >= 2) { resolve(); return; }
-                    video.addEventListener('canplay', resolve, { once: true });
-                });
-                // Extra short wait so videoWidth/videoHeight are populated
-                await new Promise(r => setTimeout(r, 300));
-
-                document.getElementById('verifyBtn').disabled = false;
-                setVerifyStatus('ready', 'Camera ready — click "Take Photo &amp; Continue".');
-            } catch (err) {
-                let msg = 'Camera error: ' + err.message;
-                if (err.name === 'NotAllowedError' || err.name === 'PermissionDeniedError')
-                    msg = 'Camera blocked. Click the camera icon in your browser address bar, choose Allow, then click Start Camera.';
-                else if (err.name === 'NotFoundError')
-                    msg = 'No camera detected on this device.';
-                else if (err.name === 'NotReadableError')
-                    msg = 'Camera is in use by another app. Close it, then click Start Camera.';
-                setVerifyStatus('error', msg);
-                btn.disabled = false;
-                btn.innerHTML = '<i class="bi bi-camera me-1"></i>Start Camera';
-            }
-        }
-
-        async function runVerification() {
-            const video  = document.getElementById('verifyVideo');
-            const canvas = document.getElementById('verifyCanvas');
-            const verifyBtn = document.getElementById('verifyBtn');
-            document.getElementById('verifyMessage').innerHTML = '';
-
-            // Capture frame while camera is still live
-            const w = video.videoWidth  || 640;
-            const h = video.videoHeight || 480;
-            canvas.width  = w;
-            canvas.height = h;
-            canvas.getContext('2d').drawImage(video, 0, 0, w, h);
-
-            // Stop the camera stream now and show the captured still instead
-            stopCamera();
-            video.style.display = 'none';
-            canvas.style.display = 'block';
-
-            verifyBtn.disabled = true;
-            verifyBtn.innerHTML = '<i class="bi bi-hourglass me-1"></i>Saving photo...';
-            setVerifyStatus('loading', 'Saving your photo...');
-
-            canvas.toBlob(async function(blob) {
-                try {
-                    const form = new FormData();
-                    form.append('photo', blob, 'verify.jpg');
-
-                    const resp = await fetch('/Student/VerifyFace', { method: 'POST', body: form });
-                    const result = await resp.json();
-
-                    if (result.verified) {
-                        setVerifyStatus('success', result.message || 'Photo verified. You may now begin the exam.');
-                        document.getElementById('beginExamBtn').classList.remove('d-none');
-                        const hint = document.getElementById('verifyHint');
-                        if (hint) hint.style.display = 'none';
-                        document.getElementById('verifyPanel').classList.add('border-success');
-                        verifyBtn.style.display = 'none';
-                    } else {
-                        // Face mismatch — show error and let student retry
-                        canvas.style.display = 'none';
-                        document.getElementById('verifyMessage').innerHTML =
-                            `<div class="alert alert-danger py-2 mt-2"><i class="bi bi-exclamation-triangle-fill me-1"></i>${result.message}</div>`;
-                        await startVerifyCamera();
-                        setVerifyStatus('error', 'Identity check failed — please try again.');
-                        verifyBtn.disabled = false;
-                        verifyBtn.innerHTML = '<i class="bi bi-arrow-clockwise me-1"></i>Retake Photo';
-                    }
-                } catch (err) {
-                    canvas.style.display = 'none';
-                    setVerifyStatus('error', 'Network error — please try again.');
-                    verifyBtn.disabled = false;
-                    verifyBtn.innerHTML = '<i class="bi bi-arrow-clockwise me-1"></i>Try Again';
-                }
-            }, 'image/jpeg', 0.85);
-        }
-
-        function stopCamera() {
-            if (verifyStream) { verifyStream.getTracks().forEach(t => t.stop()); verifyStream = null; }
-        }
-
-        function setVerifyStatus(type, msg) {
-            const map = { loading: 'bg-info', ready: 'bg-success', success: 'bg-success', error: 'bg-danger' };
-            document.getElementById('verifyStatus').innerHTML =
-                `<span class="badge ${map[type] || 'bg-secondary'} fs-6">${msg}</span>`;
-        }
-    </script>
-}

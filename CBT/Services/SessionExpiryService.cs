@@ -1,26 +1,20 @@
 using Microsoft.AspNetCore.Identity;
-using Microsoft.AspNetCore.SignalR;
 using Microsoft.EntityFrameworkCore;
 using NCS.CBT.Data;
-using NCS.CBT.Hubs;
 using NCS.CBT.Models;
-using NCS.CBT.ViewModels;
 
 namespace NCS.CBT.Services;
 
 public class SessionExpiryService : BackgroundService
 {
     private readonly IServiceScopeFactory _scopeFactory;
-    private readonly IHubContext<ExamHub> _hubContext;
     private readonly ILogger<SessionExpiryService> _logger;
 
     public SessionExpiryService(
         IServiceScopeFactory scopeFactory,
-        IHubContext<ExamHub> hubContext,
         ILogger<SessionExpiryService> logger)
     {
         _scopeFactory = scopeFactory;
-        _hubContext = hubContext;
         _logger = logger;
     }
 
@@ -77,25 +71,6 @@ public class SessionExpiryService : BackgroundService
             _logger.LogInformation(
                 "Auto-closed expired session {SessionId} for student {StudentNumber}",
                 session.Id, student.StudentNumber);
-
-            // Broadcast to proctor dashboard
-            var update = new StudentProgressUpdate
-            {
-                SessionId      = session.Id,
-                StudentId      = student.Id,
-                StudentName    = student.FullName,
-                StudentNumber  = student.StudentNumber ?? "",
-                QuestionsAnswered = session.Answers.Count,
-                TotalQuestions = session.TotalQuestions,
-                CurrentScore   = session.Score,
-                IsSubmitted    = true,
-                ExamTitle      = session.Exam?.Title ?? "",
-                ViolationCount = session.ViolationCount,
-                IsDisqualified = session.IsDisqualified
-            };
-
-            await _hubContext.Clients.Group("viewers")
-                .SendAsync("StudentSubmitted", update, ct);
         }
 
         if (activeSessions.Any(s => !s.IsActive))

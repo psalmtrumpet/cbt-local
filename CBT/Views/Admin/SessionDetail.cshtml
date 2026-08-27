@@ -52,11 +52,7 @@
                 </div>
                 <div class="col-sm-1 text-center">
                     <div class="text-muted small mb-1">Status</div>
-                    @if (Model.IsDisqualified)
-                    {
-                        <span class="badge bg-danger">DQ</span>
-                    }
-                    else if (Model.Percentage >= 50)
+                    @if (Model.Percentage >= 50)
                     {
                         <span class="badge bg-success">Pass</span>
                     }

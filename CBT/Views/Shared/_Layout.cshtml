@@ -11,7 +11,7 @@
 <body class="ncs-body">
     <nav class="navbar navbar-expand-lg ncs-navbar">
         <div class="container-fluid">
-            <a class="navbar-brand ncs-brand" href="@(User.IsInRole("Admin") ? "/Admin/Dashboard" : User.IsInRole("Viewer") ? "/Viewer/Dashboard" : "/Account/StudentLogin")">
+            <a class="navbar-brand ncs-brand" href="@(User.IsInRole("Admin") ? "/Admin/Dashboard" : "/Account/StudentLogin")">
                 <i class="bi bi-pc-display-horizontal me-2"></i>
                 <span class="fw-bold">TLIMC CBT</span>
                 <span class="brand-subtitle d-none d-md-inline">| Computer-Based Test</span>
@@ -44,31 +44,8 @@
                             </a>
                         </li>
                         <li class="nav-item">
-                            <a class="nav-link" asp-controller="Viewer" asp-action="Dashboard">
-                                <i class="bi bi-eye me-1"></i>Live Monitor
-                            </a>
-                        </li>
-                        <li class="nav-item">
-                            <a class="nav-link @(ViewContext.RouteData.Values["action"]?.ToString() == "Index" && ViewContext.RouteData.Values["controller"]?.ToString() == "Proctor" ? "active" : "")" asp-controller="Proctor" asp-action="Index">
-                                <i class="bi bi-shield-exclamation me-1"></i>Violations
-                            </a>
-                        </li>
-                        <li class="nav-item">
-                            <a class="nav-link @(ViewContext.RouteData.Values["controller"]?.ToString() == "Admin" && ViewContext.RouteData.Values["action"]?.ToString() == "Proctors" ? "active" : "")" asp-controller="Admin" asp-action="Proctors">
-                                <i class="bi bi-person-badge me-1"></i>Proctors
-                            </a>
-                        </li>
-                        <li class="nav-item">
                             <a class="nav-link @(ViewContext.RouteData.Values["action"]?.ToString() == "AssignExams" ? "active" : "")" asp-controller="Admin" asp-action="AssignExams">
                                 <i class="bi bi-diagram-3 me-1"></i>Assign Exams
-                            </a>
-                        </li>
-                    }
-                    @if (User.IsInRole("Viewer"))
-                    {
-                        <li class="nav-item">
-                            <a class="nav-link active" asp-controller="Viewer" asp-action="Dashboard">
-                                <i class="bi bi-activity me-1"></i>Live Dashboard
                             </a>
                         </li>
                     }

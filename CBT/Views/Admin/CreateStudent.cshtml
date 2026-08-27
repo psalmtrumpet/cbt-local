@@ -60,13 +60,6 @@
                     <div class="form-text">The exam login link and access PIN will be sent to this address.</div>
                 </div>
 
-                <div class="mb-4">
-                    <label asp-for="PassportPhoto" class="form-label fw-medium"></label>
-                    <input asp-for="PassportPhoto" class="form-control" type="file" accept="image/jpeg,image/png" />
-                    <span asp-validation-for="PassportPhoto" class="text-danger small"></span>
-                    <div class="form-text">JPG or PNG, used for identity verification before the exam starts. Optional.</div>
-                </div>
-
                 <div class="alert alert-info border-0 bg-light">
                     <i class="bi bi-magic me-2 text-info"></i>
                     A <strong>6-digit PIN</strong> is auto-generated and emailed to the student.

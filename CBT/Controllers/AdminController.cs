@@ -537,9 +537,8 @@ public class AdminController : Controller
             return View(model);
         }
 
-        // Extract Excel stream and collect any embedded passport photos from ZIP
+        // Extract Excel stream from ZIP or use directly
         Stream excelStream;
-        var passportEntries = new Dictionary<string, byte[]>(StringComparer.OrdinalIgnoreCase);
 
         if (ext == ".zip")
         {
@@ -556,20 +555,6 @@ public class AdminController : Controller
             using (var es = xlsxEntry.Open()) await es.CopyToAsync(xlsBytes);
             xlsBytes.Position = 0;
             excelStream = xlsBytes;
-
-            // Collect photos
-            var passportDir = Path.Combine(_env.ContentRootPath, "data", "passports");
-            Directory.CreateDirectory(passportDir);
-            foreach (var entry in zip.Entries)
-            {
-                var photoExt = Path.GetExtension(entry.Name).ToLowerInvariant();
-                if (photoExt is not (".jpg" or ".jpeg" or ".png")) continue;
-                var studentNo = Path.GetFileNameWithoutExtension(entry.Name).Trim();
-                using var ms = new MemoryStream();
-                using var es = entry.Open();
-                await es.CopyToAsync(ms);
-                passportEntries[studentNo] = ms.ToArray();
-            }
         }
         else
         {
@@ -583,8 +568,6 @@ public class AdminController : Controller
         using (var wb = new XLWorkbook(excelStream))
         {
             var ws = wb.Worksheets.First();
-            var passportDir = Path.Combine(_env.ContentRootPath, "data", "passports");
-            Directory.CreateDirectory(passportDir);
 
             int row = 2;
             while (true)
@@ -629,17 +612,6 @@ public class AdminController : Controller
                     CreatedAt      = DateTime.UtcNow
                 };
                 student.AccessCodeHash = hasher.HashPassword(student, accessCode);
-
-                // Attach passport photo if found in ZIP
-                if (passportEntries.TryGetValue(studentNumber, out var photoBytes))
-                {
-                    var photoExt = passportEntries.Keys
-                        .Where(k => string.Equals(k, studentNumber, StringComparison.OrdinalIgnoreCase))
-                        .Select(_ => ".jpg").FirstOrDefault() ?? ".jpg";
-                    var photoFile = $"{studentNumber}{photoExt}";
-                    await System.IO.File.WriteAllBytesAsync(Path.Combine(passportDir, photoFile), photoBytes);
-                    student.PassportPhotoPath = photoFile;
-                }
 
                 var createResult = await _userManager.CreateAsync(student, $"Student@{studentNumber}");
                 if (!createResult.Succeeded)
@@ -755,22 +727,6 @@ public class AdminController : Controller
         var hasher = new Microsoft.AspNetCore.Identity.PasswordHasher<ApplicationUser>();
         student.AccessCodeHash = hasher.HashPassword(student, accessCode);
 
-        // Save passport photo if provided
-        if (model.PassportPhoto != null && model.PassportPhoto.Length > 0)
-        {
-            var ext = Path.GetExtension(model.PassportPhoto.FileName).ToLowerInvariant();
-            if (ext is ".jpg" or ".jpeg" or ".png")
-            {
-                var dir = Path.Combine(_env.ContentRootPath, "data", "passports");
-                Directory.CreateDirectory(dir);
-                var fileName = $"{model.StudentNumber}{ext}";
-                var filePath = Path.Combine(dir, fileName);
-                using var fs = new FileStream(filePath, FileMode.Create);
-                await model.PassportPhoto.CopyToAsync(fs);
-                student.PassportPhotoPath = fileName;
-            }
-        }
-
         var result = await _userManager.CreateAsync(student, $"Student@{model.StudentNumber}");
         if (!result.Succeeded)
         {
@@ -789,74 +745,6 @@ public class AdminController : Controller
         var emailNote = !string.IsNullOrWhiteSpace(model.Email) ? " Credentials email queued." : "";
         TempData["Success"] = $"Student registered. Number: {model.StudentNumber} | Surname: {model.Surname.ToUpper()} | Access Code: {accessCode}{emailNote}";
         return RedirectToAction("Students");
-    }
-
-    // ── Bulk passport photo upload (ZIP of student-number.jpg files) ──────────
-    [HttpGet]
-    public IActionResult UploadPassports() => View(new BulkPassportUploadViewModel());
-
-    [HttpPost]
-    [ValidateAntiForgeryToken]
-    public async Task<IActionResult> UploadPassports(BulkPassportUploadViewModel model)
-    {
-        if (!ModelState.IsValid) return View(model);
-        if (model.ZipFile == null || model.ZipFile.Length == 0) return View(model);
-
-        var dir = Path.Combine(_env.ContentRootPath, "data", "passports");
-        Directory.CreateDirectory(dir);
-
-        int matched = 0, skipped = 0;
-        using var zip = new System.IO.Compression.ZipArchive(model.ZipFile.OpenReadStream(), System.IO.Compression.ZipArchiveMode.Read);
-        foreach (var entry in zip.Entries)
-        {
-            var name = Path.GetFileNameWithoutExtension(entry.Name).Trim();
-            var ext = Path.GetExtension(entry.Name).ToLowerInvariant();
-            if (ext is not (".jpg" or ".jpeg" or ".png")) { skipped++; continue; }
-
-            var student = _userManager.Users.FirstOrDefault(u => u.StudentNumber == name);
-            if (student == null) { skipped++; continue; }
-
-            var fileName = $"{name}{ext}";
-            var filePath = Path.Combine(dir, fileName);
-            using var fs = new FileStream(filePath, FileMode.Create);
-            using var es = entry.Open();
-            await es.CopyToAsync(fs);
-
-            student.PassportPhotoPath = fileName;
-            await _userManager.UpdateAsync(student);
-            matched++;
-        }
-
-        TempData["Success"] = $"Passports uploaded: {matched} matched, {skipped} skipped (no matching student or unsupported file).";
-        return RedirectToAction("Students");
-    }
-
-    // ── Serve a student's passport photo (Admin/Viewer only) ──────────────────
-    [HttpGet]
-    public IActionResult StudentPassportPhoto(string studentNumber)
-    {
-        var student = _userManager.Users.FirstOrDefault(u => u.StudentNumber == studentNumber);
-        if (student?.PassportPhotoPath == null) return NotFound();
-
-        var filePath = Path.Combine(_env.ContentRootPath, "data", "passports", student.PassportPhotoPath);
-        if (!System.IO.File.Exists(filePath)) return NotFound();
-
-        var contentType = filePath.EndsWith(".png", StringComparison.OrdinalIgnoreCase) ? "image/png" : "image/jpeg";
-        return PhysicalFile(filePath, contentType);
-    }
-
-    // ── Serve a student's exam-day captured photo (Admin/Viewer only) ─────────
-    [HttpGet]
-    [Authorize(Roles = "Admin,Viewer")]
-    public IActionResult StudentExamPhoto(string studentNumber)
-    {
-        var student = _userManager.Users.FirstOrDefault(u => u.StudentNumber == studentNumber);
-        if (student?.ExamPhotoPath == null) return NotFound();
-
-        var filePath = Path.Combine(_env.ContentRootPath, "data", "exam-photos", student.ExamPhotoPath);
-        if (!System.IO.File.Exists(filePath)) return NotFound();
-
-        return PhysicalFile(filePath, "image/jpeg");
     }
 
     [HttpPost]
@@ -976,108 +864,6 @@ public class AdminController : Controller
         return RedirectToAction("Students");
     }
 
-    // ===== PROCTORS =====
-
-    [HttpGet]
-    public async Task<IActionResult> Proctors()
-    {
-        var viewers = await _userManager.GetUsersInRoleAsync("Viewer");
-        var vm = viewers.Select(u => new ProctorListViewModel
-        {
-            Id = u.Id,
-            FullName = u.FullName,
-            Email = u.Email ?? "",
-            CreatedAt = u.CreatedAt
-        }).OrderBy(u => u.FullName).ToList();
-        return View(vm);
-    }
-
-    [HttpGet]
-    public IActionResult CreateProctor() => View(new CreateProctorViewModel());
-
-    [HttpPost]
-    [ValidateAntiForgeryToken]
-    public async Task<IActionResult> CreateProctor(CreateProctorViewModel model)
-    {
-        if (!ModelState.IsValid) return View(model);
-
-        if (await _userManager.FindByEmailAsync(model.Email.Trim()) != null)
-        {
-            ModelState.AddModelError("Email", "An account with this email already exists.");
-            return View(model);
-        }
-
-        var user = new ApplicationUser
-        {
-            UserName = model.Email.Trim(),
-            Email = model.Email.Trim(),
-            FullName = model.FullName.Trim(),
-            EmailConfirmed = true,
-            CreatedAt = DateTime.UtcNow
-        };
-
-        var result = await _userManager.CreateAsync(user, model.Password);
-        if (!result.Succeeded)
-        {
-            foreach (var e in result.Errors)
-                ModelState.AddModelError(string.Empty, e.Description);
-            return View(model);
-        }
-
-        await _userManager.AddToRoleAsync(user, "Viewer");
-
-        var examUrl = _configuration["Email:ExamUrl"] ?? "https://cbt.tlimc.net";
-        _ = _emailService.SendProctorCredentialsAsync(user.Email!, user.FullName, model.Password, examUrl);
-
-        TempData["Success"] = $"Proctor '{model.FullName}' registered. Login credentials sent to {user.Email}.";
-        return RedirectToAction("Proctors");
-    }
-
-    [HttpGet]
-    public async Task<IActionResult> ResetProctorPassword(string id)
-    {
-        var user = await _userManager.FindByIdAsync(id);
-        if (user == null || !await _userManager.IsInRoleAsync(user, "Viewer")) return NotFound();
-        return View(new ResetProctorPasswordViewModel { Id = id, FullName = user.FullName });
-    }
-
-    [HttpPost]
-    [ValidateAntiForgeryToken]
-    public async Task<IActionResult> ResetProctorPassword(ResetProctorPasswordViewModel model)
-    {
-        if (!ModelState.IsValid) return View(model);
-
-        var user = await _userManager.FindByIdAsync(model.Id);
-        if (user == null || !await _userManager.IsInRoleAsync(user, "Viewer")) return NotFound();
-
-        var token = await _userManager.GeneratePasswordResetTokenAsync(user);
-        var result = await _userManager.ResetPasswordAsync(user, token, model.NewPassword);
-        if (!result.Succeeded)
-        {
-            foreach (var e in result.Errors)
-                ModelState.AddModelError(string.Empty, e.Description);
-            return View(model);
-        }
-
-        var examUrl = _configuration["Email:ExamUrl"] ?? "https://cbt.tlimc.net";
-        _ = _emailService.SendProctorCredentialsAsync(user.Email!, user.FullName, model.NewPassword, examUrl);
-
-        TempData["Success"] = $"Password for '{user.FullName}' reset. New credentials sent to {user.Email}.";
-        return RedirectToAction("Proctors");
-    }
-
-    [HttpPost]
-    [ValidateAntiForgeryToken]
-    public async Task<IActionResult> DeleteProctor(string id)
-    {
-        var user = await _userManager.FindByIdAsync(id);
-        if (user == null || !await _userManager.IsInRoleAsync(user, "Viewer")) return NotFound();
-
-        await _userManager.DeleteAsync(user);
-        TempData["Success"] = "Proctor removed successfully.";
-        return RedirectToAction("Proctors");
-    }
-
     // ===== RESULTS =====
     public async Task<IActionResult> Results(int? examId = null)
     {
@@ -1110,8 +896,7 @@ public class AdminController : Controller
             TheoryCount   = s.Answers.Count(a => a.Question?.QuestionType == "Theory"),
             StartTime     = s.StartTime,
             EndTime       = s.EndTime,
-            IsSubmitted   = s.IsSubmitted,
-            IsDisqualified = s.IsDisqualified
+            IsSubmitted   = s.IsSubmitted
         }).ToList();
 
         // Assign ranks
@@ -1222,60 +1007,6 @@ public class AdminController : Controller
         return File(ms.ToArray(), "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet", fileName);
     }
 
-    // ── Export: Violations ────────────────────────────────────────────────────
-    public async Task<IActionResult> ExportViolations(int? examId = null)
-    {
-        var query = _context.ProctorViolations
-            .Include(v => v.ExamSession).ThenInclude(s => s.Student)
-            .Include(v => v.ExamSession).ThenInclude(s => s.Exam)
-            .AsQueryable();
-
-        if (examId.HasValue)
-            query = query.Where(v => v.ExamSession.ExamId == examId.Value);
-
-        var violations = await query
-            .OrderBy(v => v.ExamSession.Student.StudentNumber)
-            .ThenBy(v => v.Timestamp)
-            .ToListAsync();
-
-        using var wb = new XLWorkbook();
-        var ws = wb.Worksheets.Add("Violations");
-
-        string[] headers = { "Student No.", "Full Name", "Exam", "Violation Type", "Timestamp (WAT)",
-                              "Total Violations (Session)" };
-        for (int c = 0; c < headers.Length; c++)
-        {
-            ws.Cell(1, c + 1).Value = headers[c];
-            ws.Cell(1, c + 1).Style.Font.Bold = true;
-            ws.Cell(1, c + 1).Style.Fill.BackgroundColor = XLColor.FromHtml("#b02a37");
-            ws.Cell(1, c + 1).Style.Font.FontColor = XLColor.White;
-        }
-
-        int row = 2;
-        foreach (var v in violations)
-        {
-            var watTime = TimeZoneInfo.ConvertTimeFromUtc(v.Timestamp, _wat);
-            ws.Cell(row, 1).Value = v.ExamSession.Student.StudentNumber;
-            ws.Cell(row, 2).Value = v.ExamSession.Student.FullName;
-            ws.Cell(row, 3).Value = v.ExamSession.Exam.Title;
-            ws.Cell(row, 4).Value = v.ViolationType;
-            ws.Cell(row, 5).Value = watTime.ToString("yyyy-MM-dd HH:mm:ss");
-            ws.Cell(row, 6).Value = v.ExamSession.ViolationCount;
-            row++;
-        }
-
-        ws.Columns().AdjustToContents();
-
-        using var ms = new MemoryStream();
-        wb.SaveAs(ms);
-        ms.Position = 0;
-
-        var fileName = examId.HasValue
-            ? $"violations_exam{examId}_{DateTime.Now:yyyyMMdd_HHmm}.xlsx"
-            : $"violations_all_{DateTime.Now:yyyyMMdd_HHmm}.xlsx";
-        return File(ms.ToArray(), "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet", fileName);
-    }
-
     public async Task<IActionResult> SessionDetail(int sessionId)
     {
         var session = await _context.ExamSessions
@@ -1318,7 +1049,6 @@ public class AdminController : Controller
             TotalQuestions = session.TotalQuestions,
             StartTime = session.StartTime,
             EndTime = session.EndTime,
-            IsDisqualified = session.IsDisqualified,
             Answers = answers
         };
 
