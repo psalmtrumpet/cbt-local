@@ -14,8 +14,6 @@ obj/
 appsettings.json
 appsettings.*.json
 
-# Data files (recordings, snapshots)
-data/
 
 # OS
 .DS_Store
