@@ -44,6 +44,8 @@ services:
       Email__Password: "${SMTP_PASSWORD}"
       AzureFace__Endpoint: "${AZURE_FACE_ENDPOINT}"
       AzureFace__Key: "${AZURE_FACE_KEY}"
+    volumes:
+      - dp_keys:/app/keys
     networks:
       - cbt_local_net
     depends_on:
@@ -57,4 +59,6 @@ networks:
 
 volumes:
   sqlserver_data:
+    driver: local
+  dp_keys:
     driver: local

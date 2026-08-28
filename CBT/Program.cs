@@ -11,9 +11,9 @@ using System.Threading.RateLimiting;
 var builder = WebApplication.CreateBuilder(args);
 
 // ─── DATA PROTECTION ─────────────────────────────────────────────────────────
-// Persist keys inside the container image directory (survives container restarts within same image)
+// Keys stored in a named volume — survives container rebuilds so cookies stay valid
 builder.Services.AddDataProtection()
-    .PersistKeysToFileSystem(new System.IO.DirectoryInfo("/app/dp-keys"))
+    .PersistKeysToFileSystem(new System.IO.DirectoryInfo("/app/keys"))
     .SetApplicationName("NcsCbt");
 
 // ─── ANTIFORGERY ─────────────────────────────────────────────────────────────
@@ -21,7 +21,8 @@ builder.Services.AddDataProtection()
 builder.Services.AddAntiforgery(options =>
 {
     options.Cookie.Name = ".NcsCbt.Af";
-    options.Cookie.SameSite = SameSiteMode.Strict;
+    options.Cookie.SameSite = SameSiteMode.Lax;
+    options.Cookie.SecurePolicy = CookieSecurePolicy.None;
 });
 
 // ─── DATABASE ─────────────────────────────────────────────────────────────────

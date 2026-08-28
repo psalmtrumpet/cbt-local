@@ -25,7 +25,7 @@ COPY --from=publish /app/publish .
 
 # Run as non-root user
 RUN adduser --disabled-password --gecos "" appuser \
-    && mkdir -p /app/dp-keys \
+    && mkdir -p /app/keys \
     && chown -R appuser:appuser /app
 USER appuser
 
