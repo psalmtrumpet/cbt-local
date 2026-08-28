@@ -11,9 +11,9 @@ using System.Threading.RateLimiting;
 var builder = WebApplication.CreateBuilder(args);
 
 // ─── DATA PROTECTION ─────────────────────────────────────────────────────────
-// Persist keys to the mounted volume so antiforgery tokens survive container restarts
+// Persist keys inside the container image directory (survives container restarts within same image)
 builder.Services.AddDataProtection()
-    .PersistKeysToFileSystem(new System.IO.DirectoryInfo("/app/data/dp-keys"))
+    .PersistKeysToFileSystem(new System.IO.DirectoryInfo("/app/dp-keys"))
     .SetApplicationName("NcsCbt");
 
 // ─── ANTIFORGERY ─────────────────────────────────────────────────────────────
@@ -48,7 +48,7 @@ builder.Services.ConfigureApplicationCookie(options =>
     options.LogoutPath = "/Account/Logout";
     options.AccessDeniedPath = "/Account/AccessDenied";
     options.Cookie.HttpOnly = true;
-    options.Cookie.SecurePolicy = CookieSecurePolicy.Always;
+    options.Cookie.SecurePolicy = CookieSecurePolicy.None;
     options.Cookie.SameSite = SameSiteMode.Lax;
     options.ExpireTimeSpan = TimeSpan.FromHours(8);
     options.SlidingExpiration = true;
