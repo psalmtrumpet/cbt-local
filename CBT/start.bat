@@ -33,12 +33,13 @@ echo.
 REM Open firewall port 8080 (requires admin — silently fails if not admin)
 netsh advfirewall firewall add rule name="CBT Local Port 8080" dir=in action=allow protocol=TCP localport=8080 >nul 2>&1
 
-echo  Starting containers...
-docker compose up -d --build
+echo  Starting containers (using existing image, no internet needed)...
+docker compose up -d
 
 if %errorlevel% neq 0 (
     echo.
     echo  ERROR: Docker failed. Is Docker Desktop running?
+    echo  If this is the first time, run build.bat first (needs internet).
     pause
     exit /b 1
 )
